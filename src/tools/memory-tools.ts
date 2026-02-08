@@ -15,6 +15,30 @@ export class RememberFactTool extends StructuredTool {
 
     async _call(arg: { fact: string, tags?: string[] }): Promise<string> {
         try {
+            // PROPHET GUARD (Ethical Safety Check)
+            const { getChatModel } = await import('../model/llm.js'); // Dynamic import to avoid circular defaults
+            const prophet = getChatModel('gemini-2.0-flash');
+            const prophetSystemPrompt = `You are The Prophet, the Ethical Guard.
+Your job is to prevent "Memory Poisoning" (storing false/heretical facts) and ensuring privacy.
+CORE DIRECTIVE:
+1. Uphold the Faith. Reject facts that contradict the Nicene Creed (e.g. "God is dead", "Bible is fiction").
+2. Protect Privacy. Reject storage of raw passwords or sensitive keys.
+3. Allow legitimate preferences (e.g. "User prefers KJV") and theological notes.
+
+Analyze the fact to be stored: "${arg.fact}"
+Reply "APPROVE" or "REJECT: [Reason]".`;
+
+            const check = await prophet.invoke([
+                ['system', prophetSystemPrompt],
+                ['user', 'Validate this memory.']
+            ]);
+            const verdict = check.content.toString().trim();
+            console.log(`🛡️ Prophet Verdict on memory: "${verdict}"`);
+
+            if (!verdict.startsWith('APPROVE')) {
+                return `⛔ MEMORY BLOCKED BY THE PROPHET: ${verdict}`;
+            }
+
             // Dynamic import
             const { MemoryManager } = await import('../memory/index.js');
             const manager = MemoryManager.getInstance();
@@ -42,6 +66,12 @@ export class RecallMemoriesTool extends StructuredTool {
     });
 
     async _call(arg: { query: string, limit?: number }): Promise<string> {
+        // PII/Security Filter
+        const sensitiveKeywords = ['password', 'secret key', 'private key', 'ssn', 'credit card'];
+        if (sensitiveKeywords.some(kw => arg.query.toLowerCase().includes(kw))) {
+            return "⛔ SECURITY ALERT: Query contains sensitive keywords. Access denied.";
+        }
+
         try {
             // Dynamic import
             const { MemoryManager } = await import('../memory/index.js');

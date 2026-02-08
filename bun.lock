@@ -8,6 +8,7 @@
         "@coinbase/agentkit": "^0.10.4",
         "@coinbase/agentkit-langchain": "^0.3.0",
         "@lancedb/lancedb": "^0.24.1",
+        "@lancedb/lancedb-darwin-arm64": "^0.24.1",
         "@langchain/anthropic": "^1.1.3",
         "@langchain/core": "^1.1.0",
         "@langchain/exa": "^1.0.1",
@@ -413,6 +414,8 @@
     "@jup-ag/api": ["@jup-ag/api@6.0.48", "", {}, "sha512-H66m/cIqdVIA0qLI2X76UOhuMXkS/+uI6e4KQuU3fn6FSBhCX/9fwt/4IdwES4KWXwGtvqhsg2ExkB9tRtNhyA=="],
 
     "@lancedb/lancedb": ["@lancedb/lancedb@0.24.1", "", { "dependencies": { "reflect-metadata": "^0.2.2" }, "optionalDependencies": { "@lancedb/lancedb-linux-arm64-gnu": "0.24.1", "@lancedb/lancedb-linux-arm64-musl": "0.24.1", "@lancedb/lancedb-linux-x64-gnu": "0.24.1", "@lancedb/lancedb-linux-x64-musl": "0.24.1", "@lancedb/lancedb-win32-arm64-msvc": "0.24.1", "@lancedb/lancedb-win32-x64-msvc": "0.24.1" }, "peerDependencies": { "apache-arrow": ">=15.0.0 <=18.1.0" }, "os": [ "linux", "win32", "darwin", ], "cpu": [ "x64", "arm64", ] }, "sha512-uHQePFHlZMZg/lD4m/0dA01u47G309C8QCLxCVt6zlCRDjUtXUEpV09sMu+ujVfsYYI2SdBbAyDbbI9Mn6eK0w=="],
+
+    "@lancedb/lancedb-darwin-arm64": ["@lancedb/lancedb-darwin-arm64@0.24.1", "", { "os": "darwin", "cpu": "arm64" }, "sha512-QguwMu3jKEDqe2dtZtbCLNphZA/8hEsEjoS7eTgtx6utGTHIYNYWS6/LtYkNHGJKX6icmul7NzwMbO7cl48i0Q=="],
 
     "@lancedb/lancedb-linux-arm64-gnu": ["@lancedb/lancedb-linux-arm64-gnu@0.24.1", "", { "os": "linux", "cpu": "arm64" }, "sha512-68T+PVou6NmmNlBpJBXrpa1ITM9Wu/LZ4o1kTi9Kn0TCulb/JhtAGhcmM0gFt4GUTsZQAO9kcDuWN8Mya9lQsw=="],
 

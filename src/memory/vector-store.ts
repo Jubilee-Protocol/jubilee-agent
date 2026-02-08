@@ -53,6 +53,11 @@ export class MemoryManager {
         return MemoryManager.instance;
     }
 
+    // For testing/mocking
+    setEmbeddings(embeddings: any) {
+        this.embeddings = embeddings;
+    }
+
     async init() {
         if (this.db) return;
 

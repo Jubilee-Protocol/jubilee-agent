@@ -63,10 +63,13 @@ Jubilee can scale its attention by dispatching specialized sub-agents called **A
 -   **Usage**: "The Will" automatically decides when to use this for complex, multi-step tasks.
 
 ## 🏫 The School of Prophets (Skills)
+Jubilee is equipped with specialized workflows called **Skills** (e.g., `sermon-research`, `member-care`).
 
-Jubilee is equipped with specialized workflows called **Skills**:
--   **Sermon Research** (`sermon-research`): Assists in deep theological research, exegesis, and sermon briefing.
--   **Member Care** (`member-care`): Detailed tracking of member needs and drafting of compassionate correspondence.
+## 📜 The Chronicles (Memory)
+Jubilee uses a privacy-first, local vector memory system (LanceDB) called "The Confessional".
+-   **Active Recall**: The agent automatically searches memory for relevant context *before* answering user queries.
+-   **Preference Learning**: The agent proactively learns your style (e.g., "User prefers KJV") and adapts.
+-   **Safety**: All memories are guarded by **The Prophet**, preventing storage of heretical content or PII.
 
 ## 🛡️ The Prophet Guard
 

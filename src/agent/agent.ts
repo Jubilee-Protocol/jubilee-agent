@@ -63,7 +63,26 @@ export class Agent {
     const scratchpad = new Scratchpad(query);
 
     // Build initial prompt with conversation history context
-    let currentPrompt = this.buildInitialPrompt(query, inMemoryHistory);
+    let memoryContext = '';
+    try {
+      const { MemoryManager } = await import('../memory/index.js');
+      const memoryManager = MemoryManager.getInstance();
+      // Initialize if needed (it's a singleton, so safe to call repeatedly)
+      await memoryManager.init();
+
+      const memories = await memoryManager.recall(query, 3);
+      if (memories.length > 0) {
+        const memoryList = memories.map(m => `- ${m.text} (Source: ${m.metadata?.source ?? 'unknown'})`).join('\n');
+        memoryContext = `\n\n🧠 RELEVANT MEMORIES FROM THE CONFESSIONAL:\n${memoryList}\n(Use these memories to inform your answer if relevant.)`;
+        // Add a thinking event for visibility
+        yield { type: 'thinking', message: `Recalled ${memories.length} relevant memories from the Confessional.` };
+      }
+    } catch (e) {
+      // Silently fail if memory system is offline or missing - don't block the agent
+      // console.warn('Active Recall failed:', e);
+    }
+
+    let currentPrompt = this.buildInitialPrompt(query, inMemoryHistory) + memoryContext;
 
     let iteration = 0;
 
