@@ -64,7 +64,7 @@ export function getToolRegistry(model: string): RegisteredTool[] {
     {
       name: 'dispatch_angel',
       tool: new DispatchAngelTool(),
-      description: 'System Tool: Dispatch a specialized Sub-Agent to perform a complex task.',
+      description: 'System Tool: Dispatch a specialized Angel to perform a complex task.',
     },
   ];
 
