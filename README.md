@@ -46,9 +46,15 @@ Every session begins and ends with a guiding verse, grounding the agent's operat
 
 3.  **Required Variables**:
     -   `OPENAI_API_KEY`: For the brain (GPT-4o). (Feel free to use your preferred LLM provider. It could be Google Gemini, Anthropic, etc. OpenAI was simply used as an example.)
+
+    **Optional Variables (for Onchain Treasury Use)**:
+    
     -   `CDP_API_KEY_NAME`: From setup script.
+    
     -   `CDP_API_KEY_PRIVATE_KEY`: From setup script.
+    
     -   `CDP_WALLET_SECRET`: From setup script.
+    
     -   `CDP_NETWORK_ID`: `base-mainnet` (for production) or `base-sepolia`.
 
 ## 💻 Installation
