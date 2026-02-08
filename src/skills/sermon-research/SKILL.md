@@ -16,7 +16,7 @@ This skill guides the agent in researching a topic or scripture passage for a se
     -   *Goal*: Check if we have covered this before or have related illustrations/notes stored in the Confessional.
 
 3.  **Conduct Research**:
-    -   Use `web_search` (or `financial_search` if relevant to stewardship) to find:
+    -   Use `web_search` (or `browser` to visit specific theology sites) to find:
         -   **Exegetical Context**: Historical background, author, audience.
         -   **Original Language**: Key Hebrew/Greek words and their nuances.
         -   **Theological Themes**: Cross-references and systematic theology connections.
