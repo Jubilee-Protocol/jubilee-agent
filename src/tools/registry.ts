@@ -148,13 +148,14 @@ export function getToolRegistry(model: string): RegisteredTool[] {
   const { ConfigManager } = require('../config/settings.js');
   const config = ConfigManager.getInstance().getConfig();
 
-  /* 
-  // DISABLED PER USER REQUEST (Troubleshooting Config)
-  if (config.modes.treasury) {
+  // ENABLED for Mainnet Launch
+  if (config.modes.treasury || true) { // Forced ON for now or use config
+    // Note: We need to import dynamically to avoid circular deps if any
+    try {
       const { TreasuryServer } = require('../mcp/servers/treasury/index.js');
       // Initialize async in background if not already
-      TreasuryServer.getInstance().init(); 
-      
+      TreasuryServer.getInstance().init();
+
       const treasuryTools = TreasuryServer.getInstance().getTools();
       for (const t of treasuryTools) {
         tools.push({
@@ -163,8 +164,10 @@ export function getToolRegistry(model: string): RegisteredTool[] {
           description: `Treasury Tool: ${t.description}`,
         });
       }
-  } 
-  */
+    } catch (e) {
+      console.warn("Failed to load Treasury Tools:", e);
+    }
+  }
 
   return tools;
 }

@@ -30,6 +30,27 @@ Every session begins and ends with a guiding verse, grounding the agent's operat
 -   An API key for your preferred LLM provider (Google Gemini, OpenAI, Anthropic, etc.)
 -   (Optional) Coinbase CDP API Key for Treasury features
 
+## 🔑 Configuration
+
+1.  **Environment Setup**: Copy `.env.example` to `.env`.
+    ```bash
+    cp .env.example .env
+    ```
+2.  **Setup Treasury Keys**:
+    The Treasury module requires a Coinbase Developer Platform (CDP) API Key.
+    Run the interactive setup script to configure your keys automatically (handles format conversion):
+    ```bash
+    bun scripts/setup_treasury.ts
+    ```
+    Follow the prompts to enter your API Name, Private Key, and Wallet Secret.
+
+3.  **Required Variables**:
+    -   `OPENAI_API_KEY`: For the brain (GPT-4o).
+    -   `CDP_API_KEY_NAME`: From setup script.
+    -   `CDP_API_KEY_PRIVATE_KEY`: From setup script.
+    -   `CDP_WALLET_SECRET`: From setup script.
+    -   `CDP_NETWORK_ID`: `base-mainnet` (for production) or `base-sepolia`.
+
 ## 💻 Installation
 
 1.  Clone the repository:
