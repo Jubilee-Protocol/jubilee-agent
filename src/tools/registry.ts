@@ -97,6 +97,17 @@ export function getToolRegistry(model: string): RegisteredTool[] {
     });
   }
 
+  // Include Treasury Tools (The Almoner)
+  // We dynamically fetch them from the singleton
+  const treasuryTools = require('../mcp/servers/treasury/index.js').TreasuryServer.getInstance().getTools();
+  for (const t of treasuryTools) {
+    tools.push({
+      name: t.name,
+      tool: t,
+      description: `Treasury Tool: ${t.description}`,
+    });
+  }
+
   return tools;
 }
 
@@ -154,7 +165,8 @@ export function getToolsForRole(role: 'mind' | 'prophet' | 'will', model: string
       allowedNames = prophetTools;
       break;
     case 'will':
-      allowedNames = willTools;
+      // The Will gets everything in the registry
+      allowedNames = allTools.map(t => t.name);
       break;
   }
 
