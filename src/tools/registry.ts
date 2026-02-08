@@ -1,8 +1,9 @@
-import { StructuredToolInterface } from '@langchain/core/tools';
+import { DynamicStructuredTool, StructuredToolInterface } from '@langchain/core/tools';
 import { createFinancialSearch, createFinancialMetrics, createReadFilings } from './finance/index.js';
 import { exaSearch, tavilySearch } from './search/index.js';
-import { skillTool, SKILL_TOOL_DESCRIPTION } from './skill.js';
 import { browserTool } from './browser/index.js';
+import { skillTool, SKILL_TOOL_DESCRIPTION } from './skill.js';
+import { openClawSendMessage } from './openclaw/index.js';
 import { FINANCIAL_SEARCH_DESCRIPTION, FINANCIAL_METRICS_DESCRIPTION, WEB_SEARCH_DESCRIPTION, READ_FILINGS_DESCRIPTION, BROWSER_DESCRIPTION } from './descriptions/index.js';
 import { discoverSkills } from '../skills/index.js';
 
@@ -46,6 +47,11 @@ export function getToolRegistry(model: string): RegisteredTool[] {
       name: 'browser',
       tool: browserTool,
       description: BROWSER_DESCRIPTION,
+    },
+    {
+      name: 'openclaw_send_message',
+      tool: openClawSendMessage,
+      description: 'Sends a message or command to a local OpenClaw agent instance. Use this to delegate system tasks.',
     },
   ];
 

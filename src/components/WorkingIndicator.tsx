@@ -10,17 +10,17 @@ import { getRandomThinkingVerb } from '../utils/thinking-verbs.js';
 function ShineText({ text, color, shineColor }: { text: string; color: string; shineColor: string }) {
   const [shinePos, setShinePos] = useState(0);
   const [isPaused, setIsPaused] = useState(false);
-  
+
   useEffect(() => {
     if (isPaused) {
       // Wait 2 seconds before restarting the shine
       const timeout = setTimeout(() => {
         setShinePos(0);
         setIsPaused(false);
-      }, 2000);
+      }, 500);
       return () => clearTimeout(timeout);
     }
-    
+
     const interval = setInterval(() => {
       setShinePos((prev) => {
         const next = prev + 1;
@@ -31,10 +31,10 @@ function ShineText({ text, color, shineColor }: { text: string; color: string; s
         return next;
       });
     }, 30);
-    
+
     return () => clearInterval(interval);
   }, [isPaused, text.length]);
-  
+
   // Memoize the rendered parts for performance
   const parts = useMemo(() => {
     const result: React.ReactNode[] = [];
@@ -49,11 +49,11 @@ function ShineText({ text, color, shineColor }: { text: string; color: string; s
     }
     return result;
   }, [text, shinePos, isPaused, color, shineColor]);
-  
+
   return <>{parts}</>;
 }
 
-export type WorkingState = 
+export type WorkingState =
   | { status: 'idle' }
   | { status: 'thinking' }
   | { status: 'tool'; toolName: string }
@@ -70,40 +70,40 @@ export function WorkingIndicator({ state }: WorkingIndicatorProps) {
   const [elapsed, setElapsed] = useState(0);
   const [thinkingVerb, setThinkingVerb] = useState(getRandomThinkingVerb);
   const prevStatusRef = useRef<WorkingState['status']>('idle');
-  
+
   // Pick a new random verb when transitioning into thinking/tool state
   useEffect(() => {
     const isThinking = state.status === 'thinking' || state.status === 'tool';
     const wasThinking = prevStatusRef.current === 'thinking' || prevStatusRef.current === 'tool';
-    
+
     if (isThinking && !wasThinking) {
       setThinkingVerb(getRandomThinkingVerb());
     }
-    
+
     prevStatusRef.current = state.status;
   }, [state.status]);
-  
+
   // Track elapsed time only when answering
   useEffect(() => {
     if (state.status !== 'answering') {
       setElapsed(0);
       return;
     }
-    
+
     const startTime = state.startTime;
     setElapsed(Math.floor((Date.now() - startTime) / 1000));
-    
+
     const interval = setInterval(() => {
       setElapsed(Math.floor((Date.now() - startTime) / 1000));
     }, 1000);
-    
+
     return () => clearInterval(interval);
   }, [state]);
-  
+
   if (state.status === 'idle') {
     return null;
   }
-  
+
   let statusWord: string;
   let suffixEnd: string;
   switch (state.status) {
@@ -117,7 +117,7 @@ export function WorkingIndicator({ state }: WorkingIndicatorProps) {
       suffixEnd = ` to interrupt)`;
       break;
   }
-  
+
   return (
     <Box>
       <Text color={colors.primary}>

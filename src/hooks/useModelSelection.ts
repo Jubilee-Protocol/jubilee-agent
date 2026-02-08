@@ -26,7 +26,7 @@ export interface UseModelSelectionResult {
   provider: string;
   model: string;
   inMemoryChatHistoryRef: React.RefObject<InMemoryChatHistory>;
-  
+
   // Actions
   startSelection: () => void;
   cancelSelection: () => void;
@@ -35,7 +35,7 @@ export interface UseModelSelectionResult {
   handleModelInputSubmit: (modelName: string | null) => void;
   handleApiKeyConfirm: (wantsToSet: boolean) => void;
   handleApiKeySubmit: (apiKey: string | null) => void;
-  
+
   // Helpers
   isInSelectionFlow: () => boolean;
 }
@@ -65,16 +65,16 @@ export function useModelSelection(
     }
     return getDefaultModelForProvider(savedProvider) || DEFAULT_MODEL;
   });
-  
+
   // Selection flow state
-  const [appState, setAppState] = useState<AppState>('idle');
+  const [appState, setAppState] = useState<AppState>('provider_select');
   const [pendingProvider, setPendingProvider] = useState<string | null>(null);
   const [pendingModels, setPendingModels] = useState<Model[]>([]);
   const [pendingSelectedModelId, setPendingSelectedModelId] = useState<string | null>(null);
-  
+
   // Message history ref - shared with agent runner
   const inMemoryChatHistoryRef = useRef<InMemoryChatHistory>(new InMemoryChatHistory(model));
-  
+
   // Helper to complete a model switch (DRY pattern)
   const completeModelSwitch = useCallback((newProvider: string, newModelId: string) => {
     setProvider(newProvider);
@@ -87,7 +87,7 @@ export function useModelSelection(
     setPendingSelectedModelId(null);
     setAppState('idle');
   }, []);
-  
+
   // Reset pending state
   const resetPendingState = useCallback(() => {
     setPendingProvider(null);
@@ -95,27 +95,27 @@ export function useModelSelection(
     setPendingSelectedModelId(null);
     setAppState('idle');
   }, []);
-  
+
   // Start selection flow
   const startSelection = useCallback(() => {
     setAppState('provider_select');
   }, []);
-  
+
   // Cancel selection flow
   const cancelSelection = useCallback(() => {
     resetPendingState();
   }, [resetPendingState]);
-  
+
   // Check if in selection flow
   const isInSelectionFlow = useCallback(() => {
     return isSelectionState(appState);
   }, [appState]);
-  
+
   // Provider selection handler
   const handleProviderSelect = useCallback(async (providerId: string | null) => {
     if (providerId) {
       setPendingProvider(providerId);
-      
+
       // OpenRouter uses free-text model input instead of a list
       if (providerId === 'openrouter') {
         setPendingModels([]);
@@ -134,7 +134,7 @@ export function useModelSelection(
       setAppState('idle');
     }
   }, []);
-  
+
   // Model selection handler (for list-based selection)
   const handleModelSelect = useCallback((modelId: string | null) => {
     if (!modelId || !pendingProvider) {
@@ -145,14 +145,14 @@ export function useModelSelection(
       setAppState('provider_select');
       return;
     }
-    
+
     // For Ollama, skip API key flow entirely
     if (pendingProvider === 'ollama') {
       const fullModelId = `ollama:${modelId}`;
       completeModelSwitch(pendingProvider, fullModelId);
       return;
     }
-    
+
     // For cloud providers, check API key
     if (checkApiKeyExistsForProvider(pendingProvider)) {
       completeModelSwitch(pendingProvider, modelId);
@@ -162,7 +162,7 @@ export function useModelSelection(
       setAppState('api_key_confirm');
     }
   }, [pendingProvider, completeModelSwitch]);
-  
+
   // Model input handler (for free-text input like OpenRouter)
   const handleModelInputSubmit = useCallback((modelName: string | null) => {
     if (!modelName || !pendingProvider) {
@@ -173,10 +173,10 @@ export function useModelSelection(
       setAppState('provider_select');
       return;
     }
-    
+
     // Store with provider prefix (e.g., openrouter:anthropic/claude-3.5-sonnet)
     const fullModelId = `${pendingProvider}:${modelName}`;
-    
+
     // Check API key for the provider
     if (checkApiKeyExistsForProvider(pendingProvider)) {
       completeModelSwitch(pendingProvider, fullModelId);
@@ -186,7 +186,7 @@ export function useModelSelection(
       setAppState('api_key_confirm');
     }
   }, [pendingProvider, completeModelSwitch]);
-  
+
   // API key confirmation handler
   const handleApiKeyConfirm = useCallback((wantsToSet: boolean) => {
     if (wantsToSet) {
@@ -201,7 +201,7 @@ export function useModelSelection(
       }
     }
   }, [pendingProvider, pendingSelectedModelId, completeModelSwitch, resetPendingState, onError]);
-  
+
   // API key submit handler
   const handleApiKeySubmit = useCallback((apiKey: string | null) => {
     // Guard: ensure we have a selected model
@@ -210,7 +210,7 @@ export function useModelSelection(
       resetPendingState();
       return;
     }
-    
+
     if (apiKey && pendingProvider) {
       const saved = saveApiKeyForProvider(pendingProvider, apiKey);
       if (saved) {
@@ -227,7 +227,7 @@ export function useModelSelection(
       resetPendingState();
     }
   }, [pendingProvider, pendingSelectedModelId, completeModelSwitch, resetPendingState, onError]);
-  
+
   return {
     selectionState: {
       appState,

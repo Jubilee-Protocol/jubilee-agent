@@ -8,7 +8,7 @@ export const THINKING_VERBS = [
   'Enchanting', 'Fermenting', 'Fiddling', 'Finagling',
   'Finessing', 'Forging', 'Futzing', 'Gallivanting',
   'Gliding', 'Grooving', 'Hatching', 'Hemming and hawing',
-  'Humming', 'Hustling', 'Ideating', 'Incanting',
+  'Humming', 'Hustling', 'Ideating', 'Seeking',
   'Invoking', 'Juggling', 'Kneading', 'Manifesting',
   'Marinating', 'Moseying', 'Mulling', 'Musing',
   'Noodling', 'Percolating', 'Plotting', 'Pondering',
