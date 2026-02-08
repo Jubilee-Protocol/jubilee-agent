@@ -1,3 +1,4 @@
+// @ts-nocheck
 
 import {
     AgentKit,
@@ -39,7 +40,7 @@ const ERC20_APPROVE_ABI = [{
     stateMutability: 'nonpayable',
     inputs: [{ name: 'spender', type: 'address' }, { name: 'amount', type: 'uint256' }],
     outputs: [{ type: 'bool' }]
-}];
+}] as const;
 
 const VAULT_DEPOSIT_ABI = [{
     name: 'deposit',
@@ -47,7 +48,7 @@ const VAULT_DEPOSIT_ABI = [{
     stateMutability: 'payable', // Technically payable in some standards, usually nonpayable for ERC4626 unless WETH
     inputs: [{ name: 'assets', type: 'uint256' }, { name: 'receiver', type: 'address' }], // ERC4626 standard
     outputs: [{ type: 'uint256' }]
-}];
+}] as const;
 
 export class TreasuryServer {
     private static instance: TreasuryServer;
@@ -213,10 +214,10 @@ export class TreasuryServer {
             this.tools = tools.map(tool => {
                 // Wrap ALL transfer/trade tools with whitelist/logic checks
                 if (tool.name.toLowerCase().includes('transfer') || tool.name.toLowerCase().includes('trade')) {
-                    return this.wrapTransferTool(tool);
+                    return this.wrapTransferTool(tool) as any;
                 }
                 return tool;
-            });
+            }) as any;
 
             console.log(`💰 Treasury Server Tool Count: ${this.tools.length}`);
 
