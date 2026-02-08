@@ -12,9 +12,10 @@ import { getLangChainTools } from "@coinbase/agentkit-langchain";
 import { z } from "zod";
 import { McpServer } from "@modelcontextprotocol/sdk/server/index.js";
 import { SSEServerTransport } from "@modelcontextprotocol/sdk/server/sse.js";
-import { StructuredToolInterface } from "@langchain/core/tools";
+import { StructuredToolInterface, StructuredTool } from "@langchain/core/tools";
 import * as fs from 'fs';
 import * as path from 'path';
+import { encodeFunctionData, parseUnits, formatUnits } from 'viem';
 
 // Whitelist of allowed addresses for outgoing transfers (Mainnet)
 const WHITELISTED_ADDRESSES = process.env.TREASURY_WHITELIST
@@ -22,6 +23,33 @@ const WHITELISTED_ADDRESSES = process.env.TREASURY_WHITELIST
     : [];
 
 const WALLET_DATA_FILE = path.join(process.cwd(), 'data', 'wallet_data.json');
+
+// Jubilee Protocol Constants (Base Mainnet)
+const VAULTS = {
+    'jUSDi': process.env.JUSDI_ADDRESS || '0x26c39532C0dD06C0c4EddAeE36979626b16c77aC',
+    'jBTCi': process.env.JBTCI_ADDRESS || '0x8a4C0254258F0D3dB7Bc5C5A43825Bb4EfC81337'
+};
+
+const ASSETS = {
+    'USDC': { address: '0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913', decimals: 6 },
+    'cbBTC': { address: '0xcbB7C00004C138A352019370adAb877192AC3112', decimals: 8 }
+};
+
+const ERC20_APPROVE_ABI = [{
+    name: 'approve',
+    type: 'function',
+    stateMutability: 'nonpayable',
+    inputs: [{ name: 'spender', type: 'address' }, { name: 'amount', type: 'uint256' }],
+    outputs: [{ type: 'bool' }]
+}];
+
+const VAULT_DEPOSIT_ABI = [{
+    name: 'deposit',
+    type: 'function',
+    stateMutability: 'payable', // Technically payable in some standards, usually nonpayable for ERC4626 unless WETH
+    inputs: [{ name: 'assets', type: 'uint256' }, { name: 'receiver', type: 'address' }], // ERC4626 standard
+    outputs: [{ type: 'uint256' }]
+}];
 
 export class TreasuryServer {
     private static instance: TreasuryServer;
@@ -115,8 +143,73 @@ export class TreasuryServer {
                 }
             }
 
+
+            // Custom Tool: Invest in Jubilee Vaults (The "Swap" Logic)
+            class InvestInJubileeTool extends StructuredTool {
+                name = "invest_in_jubilee_yield";
+                description = "Swap assets (USDC, cbBTC) for Jubilee Yield Tokens (jUSDi, jBTCi). Effectively deposits assets into the Jubilee Vaults.";
+                schema = z.object({
+                    vault: z.enum(['jUSDi', 'jBTCi']).describe('The Jubilee Yield Token to obtain.'),
+                    asset: z.enum(['USDC', 'cbBTC']).describe('The asset to swap/deposit.'),
+                    amount: z.string().describe('The amount of asset to swap (e.g. "200.5").')
+                });
+
+                private walletProvider: CdpEvmWalletProvider;
+
+                constructor(walletProvider: CdpEvmWalletProvider) {
+                    super();
+                    this.walletProvider = walletProvider;
+                }
+
+                async _call(arg: { vault: string, asset: string, amount: string }): Promise<string> {
+                    const vaultAddr = VAULTS[arg.vault as keyof typeof VAULTS];
+                    if (!vaultAddr) return `Error: No address found for vault ${arg.vault}`;
+
+                    const assetInfo = ASSETS[arg.asset as keyof typeof ASSETS];
+                    if (!assetInfo) return `Error: Unknown asset ${arg.asset}`;
+
+                    try {
+                        const amountBigInt = parseUnits(arg.amount, assetInfo.decimals);
+                        const walletAddress = await this.walletProvider.getAddress();
+
+                        // 1. Approve
+                        console.log(`📝 Approving ${arg.vault} to spend ${arg.amount} ${arg.asset}...`);
+                        const approveData = encodeFunctionData({
+                            abi: ERC20_APPROVE_ABI,
+                            functionName: 'approve',
+                            args: [vaultAddr, amountBigInt]
+                        });
+
+                        const approveTx = await this.walletProvider.sendTransaction({
+                            to: assetInfo.address,
+                            data: approveData
+                        });
+                        console.log(`✅ Approved. TX: ${approveTx}`);
+
+                        // 2. Deposit
+                        console.log(`🏦 Depositing ${arg.amount} ${arg.asset} into ${arg.vault}...`);
+                        const depositData = encodeFunctionData({
+                            abi: VAULT_DEPOSIT_ABI,
+                            functionName: 'deposit',
+                            args: [amountBigInt, walletAddress]
+                        });
+
+                        const depositTx = await this.walletProvider.sendTransaction({
+                            to: vaultAddr,
+                            data: depositData
+                        });
+
+                        return `✅ Successfully swapped ${arg.amount} ${arg.asset} for ${arg.vault}.\nApprove TX: ${approveTx}\nDeposit TX: ${depositTx}`;
+
+                    } catch (e: any) {
+                        return `❌ Failed to invest: ${e.message}`;
+                    }
+                }
+            }
+
             // Get Tools
             const tools = await getLangChainTools(this.agentKit);
+            tools.push(new InvestInJubileeTool(walletProvider)); // Pass config.walletProvider which is in scope!
 
             // Filter and Wrap Tools
             this.tools = tools.map(tool => {

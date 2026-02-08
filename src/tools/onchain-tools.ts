@@ -1,7 +1,7 @@
 
 import { StructuredTool } from '@langchain/core/tools';
 import { z } from 'zod';
-import { createPublicClient, http, parseAbiItem } from 'viem';
+import { createPublicClient, http, parseAbiItem, AbiEvent } from 'viem';
 import { mainnet, base, baseSepolia } from 'viem/chains';
 
 /**
@@ -27,7 +27,7 @@ export class WaitForEventTool extends StructuredTool {
         if (network === 'base-mainnet') chain = base;
         if (network === 'ethereum') chain = mainnet;
 
-        // Create Client (Use Public RPCs for now)
+        // Create Client
         const client = createPublicClient({
             chain,
             transport: http(),
@@ -39,25 +39,32 @@ export class WaitForEventTool extends StructuredTool {
 
         try {
             const logs = await new Promise<any[]>((resolve, reject) => {
+                let unwatch: (() => void) | undefined;
+
                 const timeout = setTimeout(() => {
-                    unwatch();
+                    if (unwatch) unwatch();
                     resolve([]); // Resolve with empty array on timeout
                 }, timeoutSeconds * 1000);
 
-                const unwatch = client.watchEvent({
-                    address: contractAddress as `0x${string}`,
-                    event: parseAbiItem(abiItem),
-                    onLogs: (logs) => {
-                        clearTimeout(timeout);
-                        unwatch();
-                        resolve(logs);
-                    },
-                    onError: (err) => {
-                        clearTimeout(timeout);
-                        unwatch();
-                        reject(err);
-                    }
-                });
+                try {
+                    unwatch = client.watchEvent({
+                        address: contractAddress as `0x${string}`,
+                        event: parseAbiItem(abiItem) as AbiEvent,
+                        onLogs: (logs) => {
+                            clearTimeout(timeout);
+                            if (unwatch) unwatch();
+                            resolve(logs);
+                        },
+                        onError: (err) => {
+                            clearTimeout(timeout);
+                            if (unwatch) unwatch();
+                            reject(err);
+                        }
+                    });
+                } catch (err) {
+                    clearTimeout(timeout);
+                    reject(err);
+                }
             });
 
             if (logs.length === 0) {

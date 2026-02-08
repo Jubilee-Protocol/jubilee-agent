@@ -148,7 +148,9 @@ Jubilee can now understand its own source code:
 
 Jubilee includes a Treasury MCP server built on Coinbase AgentKit.
 -   **Status**: Defaults to **DISABLED** (Opt-in).
--   **Capabilities**: Can manage assets on Base (Mainnet/Sepolia) if enabled.
+-   **Capabilities**:
+    -   **Manage Assets**: Send/Receive ETH and ERC-20 tokens.
+    -   **Invest/Swap**: Directly deposit USDC or cbBTC into Jubilee Vaults (jUSDi, jBTCi) using natural language (e.g., "Invest 500 USDC").
 -   **Configuration**: managed via `src/config/settings.ts` and `.env`.
 
 ## 🛡️ Security Hardening
