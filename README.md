@@ -1,5 +1,7 @@
 # Jubilee 🕊️
 
+![Jubilee Logo](assets/jubilee_logo.png)
+
 Jubilee is an autonomous AI agent built on a **Triune Architecture** (The Mind, The Prophet, The Will). It generalizes the agentic loop to handle financial research, coding tasks, and system operations while integrating biblical wisdom and [OpenClaw](https://openclaw.ai) capabilities.
 
 > **Attribution**: This project is built upon the excellent [Dexter](https://github.com/virattt/dexter) framework by [Virat](https://twitter.com/virattt). We gratefully acknowledge their work as the foundation for Jubilee.
@@ -58,3 +60,7 @@ We welcome contributions! Please fork the repo and submit a PR.
 ## 📄 License
 
 This project is licensed under the MIT License.
+
+---
+
+> "Consecrate the fiftieth year and proclaim liberty throughout the land to all its inhabitants. It shall be a jubilee for you; each of you is to return to your family property and to your own clan." - Leviticus 25:10
