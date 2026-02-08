@@ -42,21 +42,12 @@ export class Agent {
   }
 
   /**
-   * Create a new Agent instance with tools and a custom system prompt.
-   */
-  static createWithPrompt(config: AgentConfig, systemPrompt: string): Agent {
-    const model = config.model ?? 'gpt-5.2';
-    const tools = getTools(model);
-    return new Agent(config, tools, systemPrompt);
-  }
-
-  /**
    * Create a new Agent instance with tools.
    */
   static create(config: AgentConfig = {}): Agent {
     const model = config.model ?? 'gpt-5.2';
-    const tools = getTools(model);
-    const systemPrompt = buildSystemPrompt(model);
+    const tools = config.tools ?? getTools(model);
+    const systemPrompt = config.systemPrompt ?? buildSystemPrompt(model);
     return new Agent(config, tools, systemPrompt);
   }
 

@@ -105,3 +105,42 @@ export function buildToolDescriptions(model: string): string {
     .map((t) => `### ${t.name}\n\n${t.description}`)
     .join('\n\n');
 }
+
+/**
+ * Get tools for a specific Triune agent role.
+ *
+ * @param role - The agent role ('mind', 'prophet', 'will')
+ * @param model - The model name
+ * @returns Array of tool instances filtered for the role
+ */
+export function getToolsForRole(role: 'mind' | 'prophet' | 'will', model: string): StructuredToolInterface[] {
+  const allTools = getToolRegistry(model);
+
+  // Define allowed tools for each role
+  // The Mind: Research and Analysis only. No system actions (OpenClaw) or actions that change state.
+  const mindTools = ['financial_search', 'financial_metrics', 'read_filings', 'browser', 'web_search', 'skill'];
+
+  // The Prophet: High-level trends and strategy. Similar to Mind but focused on synthesis.
+  const prophetTools = ['financial_search', 'financial_metrics', 'web_search', 'browser', 'skill'];
+
+  // The Will: Execution. Needs everything, including OpenClaw and specialized action tools.
+  const willTools = allTools.map(t => t.name); // All tools
+
+  let allowedNames: string[] = [];
+
+  switch (role) {
+    case 'mind':
+      allowedNames = mindTools;
+      break;
+    case 'prophet':
+      allowedNames = prophetTools;
+      break;
+    case 'will':
+      allowedNames = willTools;
+      break;
+  }
+
+  return allTools
+    .filter(t => allowedNames.includes(t.name))
+    .map(t => t.tool);
+}

@@ -10,9 +10,9 @@ Jubilee is an autonomous AI agent built on a **Triune Architecture** (The Mind, 
 
 Jubilee operates through three distinct sub-agents that work in concert:
 
-1.  **The Mind 🧠**: Analytical, logical, and data-driven. It breaks down problems and seeks factual answers.
-2.  **The Prophet 👁️**: Intuitive, forward-looking, and strategic. It looks for trends, implications, and "the bigger picture."
-3.  **The Will ⚡**: The executor. It synthesizes the insights from The Mind and The Prophet into a concrete action plan and executes it.
+1.  **The Mind 🧠**: Analytical, logical, and data-driven. It has access to **read-only tools** (Search, Browser, Financial Metrics) to break down problems and find facts without risking system state.
+2.  **The Prophet 👁️**: Intuitive, forward-looking, and strategic. It uses the same **read-only tools** to identify trends and "the bigger picture."
+3.  **The Will ⚡**: The executor. It synthesizes insights and has **full tool access** (including OpenClaw and trading) to execute the final plan.
 
 Every session begins and ends with a guiding verse, grounding the agent's operation in wisdom.
 

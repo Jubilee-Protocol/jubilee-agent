@@ -1,8 +1,9 @@
+
 import { Agent } from './agent.js';
 import { buildMindPrompt, buildProphetPrompt, buildWillPrompt } from './prompts.js';
 import type { AgentConfig, AgentEvent, DoneEvent } from './types.js';
 import { InMemoryChatHistory } from '../utils/in-memory-chat-history.js';
-import { getTools } from '../tools/registry.js';
+import { getToolsForRole } from '../tools/registry.js';
 import { AIMessage } from '@langchain/core/messages';
 
 /**
@@ -29,8 +30,8 @@ export class TriuneAgent {
         // --- PHASE 1: PARALLEL EXECUTION (MIND & PROPHET) ---
         yield { type: 'thinking', message: 'Summoning The Mind and The Prophet...' };
 
-        const mindPromise = this.runSubAgent('The Mind', buildMindPrompt(this.model), query, history);
-        const prophetPromise = this.runSubAgent('The Prophet', buildProphetPrompt(this.model), query, history);
+        const mindPromise = this.runSubAgent('The Mind', buildMindPrompt(this.model), query, history, 'mind');
+        const prophetPromise = this.runSubAgent('The Prophet', buildProphetPrompt(this.model), query, history, 'prophet');
 
         // We need to yield events from both as they happen. 
         // Since generators aren't easily merged in strictly chronological order without a helper,
@@ -83,7 +84,11 @@ export class TriuneAgent {
 
         // Create The Will agent
         // We treat the "query" for the Will as the original query decision
-        const willAgentInstance = CustomSystemPromptAgent.create(this.config, willPrompt);
+        const willAgentInstance = Agent.create({
+            ...this.config,
+            systemPrompt: willPrompt,
+            tools: getToolsForRole('will', this.model)
+        });
 
         const willStream = willAgentInstance.run(query, history);
 
@@ -123,9 +128,13 @@ export class TriuneAgent {
      * But checking 2 streams at once on one TTY is hard. 
      * We will silence the sub-agents for now and just report "Done".
      */
-    private async runSubAgent(name: string, systemPrompt: string, query: string, history: InMemoryChatHistory): Promise<{ answer: string, iterations: number }> {
-        // We need to access the private constructor or use a modified create.
-        const agent = CustomSystemPromptAgent.create(this.config, systemPrompt);
+    private async runSubAgent(name: string, systemPrompt: string, query: string, history: InMemoryChatHistory, role: 'mind' | 'prophet'): Promise<{ answer: string, iterations: number }> {
+        // Use the standard Agent.create with our new systemPrompt config option
+        const agent = Agent.create({
+            ...this.config,
+            systemPrompt,
+            tools: getToolsForRole(role, this.model)
+        });
 
         // We use a blank history for sub-agents so they don't get confused by previous chat context 
         // meant for the "whole" agent, OR we pass it. 
@@ -146,24 +155,5 @@ export class TriuneAgent {
         }
 
         return { answer: finalAnswer, iterations };
-    }
-}
-
-/**
- * A helper to expose a factory for Agent with custom system prompt.
- * Since Agent constructor is private, we will likely need to export a new static method on Agent 
- * OR modify Agent to allow this.
- * 
- * Ideally, I should strictly modify `Agent.ts` to support this pattern cleanly.
- * But for this file to compile, I'll need `Agent.createWithSystemPrompt` or similar.
- * 
- * Let's assume I will add `createWithPrompt` to Agent class in `agent.ts`.
- */
-class CustomSystemPromptAgent {
-    static create(config: AgentConfig, systemPrompt: string): Agent {
-        // This is a placeholder. I need to modify Agent.ts to expose this capability.
-        // I will use a cast or similar if I can't change Agent.ts, but changing Agent.ts is better.
-        // @ts-ignore - Accessing private functionality or I will add this method.
-        return Agent.createWithPrompt(config, systemPrompt);
     }
 }

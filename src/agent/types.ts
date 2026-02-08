@@ -1,3 +1,5 @@
+import { StructuredToolInterface } from '@langchain/core/tools';
+
 /**
  * Agent configuration
  */
@@ -6,6 +8,10 @@ export interface AgentConfig {
   model?: string;
   /** Model provider (e.g., 'openai', 'anthropic', 'google', 'ollama') */
   modelProvider?: string;
+  /** System prompt override (optional) */
+  systemPrompt?: string;
+  /** Custom tools array (optional) */
+  tools?: StructuredToolInterface[];
   /** Maximum agent loop iterations (default: 10) */
   maxIterations?: number;
   /** AbortSignal for cancelling agent execution */
