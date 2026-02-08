@@ -129,7 +129,7 @@ export class Agent {
       }
 
       // Execute tools and add results to scratchpad (response is AIMessage here)
-      const generator = this.executeToolCalls(response, query, scratchpad);
+      const generator = this.executeToolCalls(response, query, scratchpad, inMemoryHistory);
       let result = await generator.next();
 
       // Yield tool events
@@ -206,7 +206,8 @@ export class Agent {
   private async *executeToolCalls(
     response: AIMessage,
     query: string,
-    scratchpad: Scratchpad
+    scratchpad: Scratchpad,
+    inMemoryHistory?: InMemoryChatHistory
   ): AsyncGenerator<ToolStartEvent | ToolProgressEvent | ToolEndEvent | ToolErrorEvent | ToolLimitEvent, void> {
     for (const toolCall of response.tool_calls!) {
       const toolName = toolCall.name;
@@ -218,7 +219,7 @@ export class Agent {
         if (scratchpad.hasExecutedSkill(skillName)) continue;
       }
 
-      const generator = this.executeToolCall(toolName, toolArgs, query, scratchpad);
+      const generator = this.executeToolCall(toolName, toolArgs, query, scratchpad, inMemoryHistory);
       let result = await generator.next();
 
       while (!result.done) {
@@ -228,17 +229,53 @@ export class Agent {
     }
   }
 
+  // Security: List of tools requiring explicit user confirmation
+  private static readonly SENSITIVE_TOOLS = new Set([
+    'shell_execute',
+    'fs_write_file',
+    'transfer_eth',
+    'transfer_usdc',
+    'erc20_transfer',
+    'trade_assets'
+  ]);
+
   /**
    * Execute a single tool call and add result to scratchpad.
    * Yields start/end/error events for UI updates.
    * Includes soft limit warnings to guide the LLM.
+   * Includes Security Hardening (Double-Confirmation).
    */
   private async *executeToolCall(
     toolName: string,
     toolArgs: Record<string, unknown>,
     query: string,
-    scratchpad: Scratchpad
+    scratchpad: Scratchpad,
+    inMemoryHistory?: InMemoryChatHistory
   ): AsyncGenerator<ToolStartEvent | ToolProgressEvent | ToolEndEvent | ToolErrorEvent | ToolLimitEvent, void> {
+    // Security Check: Double-Confirmation
+    if (Agent.SENSITIVE_TOOLS.has(toolName)) {
+      const lastUserMessage = inMemoryHistory?.getLastUserMessage()?.toLowerCase() || query.toLowerCase();
+      const confirmationKeywords = ['confirm', 'approve', 'proceed', 'yes', 'do it'];
+
+      // Check if the IMMEDIATE user input authorizes the action
+      const isConfirmed = confirmationKeywords.some(keyword => lastUserMessage.includes(keyword));
+
+      if (!isConfirmed) {
+        const warning = `Security Block: tool '${toolName}' requires explicit confirmation.`;
+        yield { type: 'tool_error', tool: toolName, error: warning };
+
+        // Record as a "result" so the Agent knows it was blocked and can ask the user
+        scratchpad.recordToolCall(toolName, query); // Count it usage
+        scratchpad.addToolResult(toolName, toolArgs,
+          `SECURITY ALERT: This tool ('${toolName}') is classified as SENSITIVE. ` +
+          `The user MUST explicitly type "CONFIRM", "APPROVE", or "YES" in their latest message to authorize this action. ` +
+          `Action BLOCKED. Please ask the user for confirmation.`
+        );
+        return; // EXIT - Do not execute
+      }
+    }
+
+    // Extract query string from tool args for similarity detection
     // Extract query string from tool args for similarity detection
     const toolQuery = this.extractQueryFromArgs(toolArgs);
 

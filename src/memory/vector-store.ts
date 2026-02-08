@@ -123,7 +123,11 @@ export class MemoryManager {
             }
 
             return entry.id;
-        } catch (e) {
+        } catch (e: any) {
+            if (e.code === 'ECONNREFUSED' || e.message?.includes('ConnectionRefused')) {
+                console.warn('⚠️ Memory Manager: Ollama offline. Skipping memory storage.');
+                return 'skipped-offline';
+            }
             console.error('Failed to store memory', e);
             throw e;
         }
@@ -149,7 +153,11 @@ export class MemoryManager {
                 // standard vector search returns distance usually. 
                 metadata: JSON.parse(r.metadata || '{}')
             }));
-        } catch (e) {
+        } catch (e: any) {
+            if (e.code === 'ECONNREFUSED' || e.message?.includes('ConnectionRefused')) {
+                console.warn('⚠️ Memory Manager: Ollama offline. Skipping memory recall.');
+                return [];
+            }
             console.error('Failed to recall memories', e);
             return [];
         }

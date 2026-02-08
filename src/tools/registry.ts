@@ -1,6 +1,7 @@
 import { StructuredToolInterface } from '@langchain/core/tools';
 import { BibleTool } from './bible.js';
 import { CommunicationTool } from './communication.js';
+import { IngestCodebaseTool, SearchCodebaseTool } from './codebase-tools.js';
 
 // ... imports
 
@@ -94,6 +95,16 @@ export function getToolRegistry(model: string): RegisteredTool[] {
       tool: new CommunicationTool(),
       description: 'System Tool: Draft emails or messages (Saves to file, does NOT send).',
     },
+    {
+      name: 'ingest_codebase',
+      tool: new IngestCodebaseTool(),
+      description: 'System Tool: Scan and index the codebase for semantic search.',
+    },
+    {
+      name: 'search_codebase',
+      tool: new SearchCodebaseTool(),
+      description: 'System Tool: Find code logic or patterns using natural language.',
+    },
   ];
 
   // Include web_search if Exa or Tavily API key is configured (Exa preferred)
@@ -131,16 +142,28 @@ export function getToolRegistry(model: string): RegisteredTool[] {
     });
   }
 
-  // Include Treasury Tools (The Almoner) -- DISABLED per user request
-  // We dynamically fetch them from the singleton
-  // const treasuryTools = require('../mcp/servers/treasury/index.js').TreasuryServer.getInstance().getTools();
-  // for (const t of treasuryTools) {
-  //   tools.push({
-  //     name: t.name,
-  //     tool: t,
-  //     description: `Treasury Tool: ${t.description}`,
-  //   });
-  // }
+  // Include Treasury Tools (The Almoner)
+  // Check Config first
+  const { ConfigManager } = require('../config/settings.js');
+  const config = ConfigManager.getInstance().getConfig();
+
+  /* 
+  // DISABLED PER USER REQUEST (Troubleshooting Config)
+  if (config.modes.treasury) {
+      const { TreasuryServer } = require('../mcp/servers/treasury/index.js');
+      // Initialize async in background if not already
+      TreasuryServer.getInstance().init(); 
+      
+      const treasuryTools = TreasuryServer.getInstance().getTools();
+      for (const t of treasuryTools) {
+        tools.push({
+          name: t.name,
+          tool: t,
+          description: `Treasury Tool: ${t.description}`,
+        });
+      }
+  } 
+  */
 
   return tools;
 }
@@ -179,11 +202,11 @@ export function getToolsForRole(role: 'mind' | 'prophet' | 'will', model: string
   const allTools = getToolRegistry(model);
 
   // Define allowed tools for each role
-  // The Mind: Research and Analysis only. No system actions (OpenClaw) or actions that change state.
-  const mindTools = ['financial_search', 'financial_metrics', 'read_filings', 'browser', 'web_search', 'skill', 'remember_fact', 'recall_memories', 'bible_lookup'];
+  // The Mind: Research and Analysis only.
+  const mindTools = ['financial_search', 'financial_metrics', 'read_filings', 'browser', 'web_search', 'skill', 'remember_fact', 'recall_memories', 'bible_lookup', 'get_wallet_details', 'get_balance', 'search_codebase'];
 
-  // The Prophet: High-level trends and strategy. Similar to Mind but focused on synthesis.
-  const prophetTools = ['financial_search', 'financial_metrics', 'web_search', 'browser', 'skill', 'remember_fact', 'recall_memories', 'bible_lookup', 'draft_email'];
+  // The Prophet: High-level trends and strategy.
+  const prophetTools = ['financial_search', 'financial_metrics', 'web_search', 'browser', 'skill', 'remember_fact', 'recall_memories', 'bible_lookup', 'draft_email', 'get_wallet_details', 'get_balance', 'search_codebase'];
 
   // The Will: Execution. Needs everything, including OpenClaw and specialized action tools.
   // Note: OpenClaw system tools (shell_execute, etc.) are now loaded dynamically via MCP.

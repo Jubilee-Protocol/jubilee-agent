@@ -114,8 +114,26 @@ Jubilee features a privacy-first memory system stored locally:
 
 Jubilee functions as a **System Agent** via the Model Context Protocol (MCP):
 -   **Tools**: `shell_execute` (Run commands), `fs_read/write` (Manage files).
+-   **Security**: Protected by **Double-Confirmation**. Sensitive commands require explicit user approval (e.g., "CONFIRM run this").
 -   **Architecture**: Runs as a local MCP server (`src/mcp/servers/openclaw`).
--   **Safety**: Currently runs with full user privileges. Future updates will include a sandbox mode.
+
+## 🧠 The Deep Mind (Codebase Context)
+
+Jubilee can now understand its own source code:
+-   **Ingestion**: Indexes the `src/` directory into a local vector database.
+-   **Search**: Use `search_codebase` to ask implementation questions (e.g., "How does the memory manager handle offline errors?").
+
+## 💰 The Almoner (Treasury) [OPTIONAL]
+
+Jubilee includes a Treasury MCP server built on Coinbase AgentKit.
+-   **Status**: Defaults to **DISABLED** (Opt-in).
+-   **Capabilities**: Can manage assets on Base (Mainnet/Sepolia) if enabled.
+-   **Configuration**: managed via `src/config/settings.ts` and `.env`.
+
+## 🛡️ Security Hardening
+
+-   **Double-Confirmation**: Utilizing "The Will", sensitive actions (Shell, Transfers) are blocked unless the user explicitly types "CONFIRM", "APPROVE", or "YES".
+-   **Resilience**: The Memory system degrades gracefully if local AI services (Ollama) are offline.
 
 ## �🤝 Contribution
 
