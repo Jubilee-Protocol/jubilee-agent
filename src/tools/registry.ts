@@ -2,6 +2,7 @@ import { StructuredToolInterface } from '@langchain/core/tools';
 import { BibleTool } from './bible.js';
 import { CommunicationTool } from './communication.js';
 import { IngestCodebaseTool, SearchCodebaseTool } from './codebase-tools.js';
+import { WaitForEventTool } from './onchain-tools.js';
 
 // ... imports
 
