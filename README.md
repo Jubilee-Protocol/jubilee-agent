@@ -20,13 +20,16 @@ Every session begins and ends with a guiding verse, grounding the agent's operat
 
 -   **Interactive Setup**: Automatically detects your AI provider (OpenAI, Anthropic, Google, etc.) and prompts for API keys if missing.
 -   **OpenClaw Integration**: Can delegate system-level tasks to a local [OpenClaw](https://github.com/openclaw/openclaw) instance.
+-   **Hosts Mode ("The Lord of Hosts")**: "The Will" can dispatch specialized sub-agents ("Angels") for parallel, isolated tasks (e.g., "Research Angel", "Coder Angel").
+-   **Treasury ("The Almoner")**: Integrated with [Coinbase AgentKit](https://docs.cdp.coinbase.com/agentkit/docs/welcome) for on-chain asset management and transfers.
 -   **Multi-Model Support**: Switch between GPT-4, Claude 3.5 Sonnet, Gemini Pro, and more on the fly.
--   **Self-Correction**: The agent reflects on its own output and iterates to improve accuracy.
+-   **Self-Correction**: The agent reflects on its own output and iterates to improve warranty.
 
 ## ✅ Prerequisites
 
 -   [Bun](https://bun.com) runtime (v1.0 or higher)
 -   An API key for your preferred LLM provider (Google Gemini, OpenAI, Anthropic, etc.)
+-   (Optional) Coinbase CDP API Key for Treasury features
 
 ## 💻 Installation
 
