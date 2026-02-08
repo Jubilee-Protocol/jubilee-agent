@@ -62,6 +62,19 @@ Jubilee can scale its attention by dispatching specialized sub-agents called **A
 -   **Capabilities**: Angels can be equipped with specific tools (e.g., "web_search", "skill") and a mission.
 -   **Usage**: "The Will" automatically decides when to use this for complex, multi-step tasks.
 
+## 🏫 The School of Prophets (Skills)
+
+Jubilee is equipped with specialized workflows called **Skills**:
+-   **Sermon Research** (`sermon-research`): Assists in deep theological research, exegesis, and sermon briefing.
+-   **Member Care** (`member-care`): Detailed tracking of member needs and drafting of compassionate correspondence.
+
+## 🛡️ The Prophet Guard
+
+Every mission dispatched to an "Angel" (Sub-Agent) is first vetted by **The Prophet Guard**. This automated ethical safety check ensures:
+-   **Adherence to the Nicene Creed**: Rejects heretical content (e.g., denying the Resurrection).
+-   **Privacy Protection**: Blocks attempts to access or leak private member data.
+-   **Truthfulness**: Prevents hallucination and deception.
+
 
 
 
