@@ -13,7 +13,13 @@ config({ quiet: true });
 
 // Initialize MCP Manager
 // Detect mcp.json or use default empty config
-let mcpConfig = [];
+interface McpConfigItem {
+    id: string;
+    command: string;
+    args: string[];
+    disabled?: boolean;
+}
+let mcpConfig: McpConfigItem[] = [];
 const mcpConfigPath = path.resolve(process.cwd(), 'mcp.json');
 
 if (fs.existsSync(mcpConfigPath)) {

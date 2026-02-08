@@ -43,7 +43,7 @@ export class McpTool extends StructuredTool {
                 else if (prop.type === 'number' || prop.type === 'integer') zodSchema = z.number();
                 else if (prop.type === 'boolean') zodSchema = z.boolean();
                 else if (prop.type === 'array') zodSchema = z.array(z.any());
-                else if (prop.type === 'object') zodSchema = z.record(z.any());
+                else if (prop.type === 'object') zodSchema = z.record(z.string(), z.any());
 
                 if (prop.description) {
                     zodSchema = zodSchema.describe(prop.description);

@@ -112,9 +112,9 @@ export class MemoryManager {
             // 3. Insert
             if (!this.table) {
                 // First time creation, infer schema from entry
-                this.table = await this.db!.createTable(this.tableName, [entry]);
+                this.table = await this.db!.createTable(this.tableName, [entry as any]);
             } else {
-                await this.table.add([entry]);
+                await this.table.add([entry as any]);
             }
 
             return entry.id;
