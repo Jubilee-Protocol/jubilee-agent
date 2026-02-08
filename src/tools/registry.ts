@@ -1,3 +1,4 @@
+import { StructuredToolInterface } from '@langchain/core/tools';
 import { BibleTool } from './bible.js';
 import { CommunicationTool } from './communication.js';
 
@@ -24,8 +25,7 @@ import { discoverSkills } from '../skills/index.js';
 import { McpManager } from '../mcp/index.js';
 import { RememberFactTool, RecallMemoriesTool } from './memory-tools.js';
 import { DispatchAngelTool } from './angel-tool.js';
-import { BibleTool } from './bible.js';
-import { CommunicationTool } from './communication.js';
+
 
 
 /**

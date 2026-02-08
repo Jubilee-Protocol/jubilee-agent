@@ -9,6 +9,18 @@ async function auditMemory() {
     try {
         const { MemoryManager } = await import('../src/memory/index.js');
         const mem = MemoryManager.getInstance();
+
+        // Check if setEmbeddings exists (it should, based on Phase 3 checks)
+        if ('setEmbeddings' in mem) {
+            const mockEmbeddings = {
+                embedDocuments: async (texts: string[]) => texts.map(() => Array(1024).fill(0.1)),
+                embedQuery: async (text: string) => Array(1024).fill(0.1)
+            };
+            // @ts-ignore
+            mem.setEmbeddings(mockEmbeddings);
+            console.log("   (Using Mock Embeddings for Audit)");
+        }
+
         await mem.init();
         await mem.remember("Audit Log: System verified on " + new Date().toISOString(), { tags: ["audit"] });
         await new Promise(r => setTimeout(r, 1000));
@@ -77,10 +89,49 @@ async function auditOpenClaw() {
     }
 }
 
+async function auditNetwork() {
+    console.log('\n--- 3. Auditing The Network (Phase 4 Tools) ---');
+
+    // 3a. Bible Tool
+    try {
+        const { BibleTool } = await import('../src/tools/bible.js');
+        const tool = new BibleTool();
+        const res = await tool._call({ reference: "John 11:35" });
+        if (res.includes("Jesus wept")) {
+            console.log("✅ Bible Tool: PASS");
+        } else {
+            console.error(`❌ Bible Tool Failed: ${res}`);
+        }
+    } catch (e) {
+        console.error("❌ Bible Tool Error:", e);
+    }
+
+    // 3b. Communication Tool
+    try {
+        const { CommunicationTool } = await import('../src/tools/communication.js');
+        const comm = new CommunicationTool();
+        const res = await comm._call({
+            recipient: "Audit_Bot",
+            subject: "Audit Test",
+            body: "Testing secure draft creation."
+        });
+
+        if (res.includes("Draft saved")) {
+            console.log("✅ Communication Tool: PASS");
+            // Cleanup would happen here in a real env, but we leave for manual inspection if needed
+        } else {
+            console.error(`❌ Communication Tool Failed: ${res}`);
+        }
+    } catch (e) {
+        console.error("❌ Communication Tool Error:", e);
+    }
+}
+
 async function fullAudit() {
     console.log('🔒 STARTING JUBILEE SYSTEM AUDIT 🔒');
     await auditMemory();
     await auditOpenClaw();
+    await auditNetwork();
     console.log('\n🎉 AUDIT COMPLETE 🎉');
 }
 
