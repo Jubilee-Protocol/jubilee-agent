@@ -23,7 +23,7 @@ export class WaitForEventTool extends StructuredTool {
         const { contractAddress, abiItem, timeoutSeconds, network } = arg;
 
         // Resolve Chain
-        let chain = baseSepolia;
+        let chain: any = baseSepolia;
         if (network === 'base-mainnet') chain = base;
         if (network === 'ethereum') chain = mainnet;
 

@@ -10,8 +10,6 @@ import {
 import { getLangChainTools } from "@coinbase/agentkit-langchain";
 
 import { z } from "zod";
-import { McpServer } from "@modelcontextprotocol/sdk/server/index.js";
-import { SSEServerTransport } from "@modelcontextprotocol/sdk/server/sse.js";
 import { StructuredToolInterface, StructuredTool } from "@langchain/core/tools";
 import * as fs from 'fs';
 import * as path from 'path';
@@ -229,10 +227,12 @@ export class TreasuryServer {
     }
 
     private wrapTransferTool(originalTool: StructuredToolInterface): StructuredToolInterface {
-        const originalCall = originalTool.call.bind(originalTool);
+        // Broadly cast to avoid complex LangChain type nesting issues
+        const toolAny = originalTool as any;
+        const originalCall = toolAny.call.bind(toolAny);
 
         const wrappedTool = Object.create(originalTool);
-        wrappedTool.call = async (arg: any, config: any) => {
+        wrappedTool.call = async (arg: any, config?: any) => {
             let toAddress = '';
             if (typeof arg === 'object') {
                 toAddress = arg.to || arg.destination || arg.recipient || arg.address || '';
@@ -250,10 +250,14 @@ export class TreasuryServer {
             }
 
             console.log(`👮‍♂️ Whitelist Check Passed for: ${toAddress}`);
-            return originalCall(arg, config);
+
+            if (config) {
+                return (originalCall as any)(arg, config);
+            }
+            return (originalCall as any)(arg);
         };
 
-        return wrappedTool;
+        return wrappedTool as any;
     }
 
     getTools(): StructuredToolInterface[] {

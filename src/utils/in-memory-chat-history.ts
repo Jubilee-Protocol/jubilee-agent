@@ -215,6 +215,14 @@ Select which previous messages are relevant to understanding or answering the cu
   }
 
   /**
+   * Returns the most recent user query content
+   */
+  getLastUserMessage(): string | undefined {
+    const userMessages = this.getUserMessages();
+    return userMessages[userMessages.length - 1];
+  }
+
+  /**
    * Clears all messages and cache
    */
   clear(): void {
