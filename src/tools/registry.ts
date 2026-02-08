@@ -1,4 +1,20 @@
-import { DynamicStructuredTool, StructuredToolInterface } from '@langchain/core/tools';
+import { BibleTool } from './bible.js';
+import { CommunicationTool } from './communication.js';
+
+// ... imports
+
+
+
+// ...
+
+// In getToolsForRole
+
+// The Mind: Research and Analysis only.
+const mindTools = ['financial_search', 'financial_metrics', 'read_filings', 'browser', 'web_search', 'skill', 'remember_fact', 'recall_memories', 'bible_lookup'];
+
+// The Prophet: High-level trends and strategy.
+const prophetTools = ['financial_search', 'financial_metrics', 'web_search', 'browser', 'skill', 'remember_fact', 'recall_memories', 'bible_lookup', 'draft_email'];
+
 import { createFinancialSearch, createFinancialMetrics, createReadFilings } from './finance/index.js';
 import { exaSearch, tavilySearch } from './search/index.js';
 import { browserTool } from './browser/index.js';
@@ -8,6 +24,8 @@ import { discoverSkills } from '../skills/index.js';
 import { McpManager } from '../mcp/index.js';
 import { RememberFactTool, RecallMemoriesTool } from './memory-tools.js';
 import { DispatchAngelTool } from './angel-tool.js';
+import { BibleTool } from './bible.js';
+import { CommunicationTool } from './communication.js';
 
 
 /**
@@ -65,6 +83,16 @@ export function getToolRegistry(model: string): RegisteredTool[] {
       name: 'dispatch_angel',
       tool: new DispatchAngelTool(),
       description: 'System Tool: Dispatch a specialized Angel to perform a complex task.',
+    },
+    {
+      name: 'bible_lookup',
+      tool: new BibleTool(),
+      description: 'System Tool: Look up scripture references directly (e.g. "John 3:16").',
+    },
+    {
+      name: 'draft_email',
+      tool: new CommunicationTool(),
+      description: 'System Tool: Draft emails or messages (Saves to file, does NOT send).',
     },
   ];
 
@@ -152,10 +180,10 @@ export function getToolsForRole(role: 'mind' | 'prophet' | 'will', model: string
 
   // Define allowed tools for each role
   // The Mind: Research and Analysis only. No system actions (OpenClaw) or actions that change state.
-  const mindTools = ['financial_search', 'financial_metrics', 'read_filings', 'browser', 'web_search', 'skill', 'remember_fact', 'recall_memories'];
+  const mindTools = ['financial_search', 'financial_metrics', 'read_filings', 'browser', 'web_search', 'skill', 'remember_fact', 'recall_memories', 'bible_lookup'];
 
   // The Prophet: High-level trends and strategy. Similar to Mind but focused on synthesis.
-  const prophetTools = ['financial_search', 'financial_metrics', 'web_search', 'browser', 'skill', 'remember_fact', 'recall_memories'];
+  const prophetTools = ['financial_search', 'financial_metrics', 'web_search', 'browser', 'skill', 'remember_fact', 'recall_memories', 'bible_lookup', 'draft_email'];
 
   // The Will: Execution. Needs everything, including OpenClaw and specialized action tools.
   // Note: OpenClaw system tools (shell_execute, etc.) are now loaded dynamically via MCP.

@@ -71,6 +71,13 @@ Jubilee uses a privacy-first, local vector memory system (LanceDB) called "The C
 -   **Preference Learning**: The agent proactively learns your style (e.g., "User prefers KJV") and adapts.
 -   **Safety**: All memories are guarded by **The Prophet**, preventing storage of heretical content or PII.
 
+## 🌐 The Network (Integration)
+Jubilee integrates with external tools while maintaining strict safety boundaries:
+-   **Bible Tool**: Direct scripture lookup via `bible-api.com` (KJV, WEB, etc.).
+-   **Communication**: "Draft-Only" email system. Jubilee writes drafts to a local folder for your review but **cannot send** messages directly.
+-   **Anti-Spam**: Rate limits prevent bulk generation.
+-   **Anti-Abuse**: Content filters block harmful language in drafts.
+
 ## 🛡️ The Prophet Guard
 
 Every mission dispatched to an "Angel" (Sub-Agent) is first vetted by **The Prophet Guard**. This automated ethical safety check ensures:
