@@ -64,7 +64,7 @@ export function getToolRegistry(model: string): RegisteredTool[] {
     {
       name: 'dispatch_angel',
       tool: new DispatchAngelTool(),
-      description: 'Meta Tool: Dispatch a specialized sub-agent ("Angel") to perform a complex task.',
+      description: 'System Tool: Dispatch a specialized Sub-Agent to perform a complex task.',
     },
   ];
 
@@ -103,16 +103,16 @@ export function getToolRegistry(model: string): RegisteredTool[] {
     });
   }
 
-  // Include Treasury Tools (The Almoner)
+  // Include Treasury Tools (The Almoner) -- DISABLED per user request
   // We dynamically fetch them from the singleton
-  const treasuryTools = require('../mcp/servers/treasury/index.js').TreasuryServer.getInstance().getTools();
-  for (const t of treasuryTools) {
-    tools.push({
-      name: t.name,
-      tool: t,
-      description: `Treasury Tool: ${t.description}`,
-    });
-  }
+  // const treasuryTools = require('../mcp/servers/treasury/index.js').TreasuryServer.getInstance().getTools();
+  // for (const t of treasuryTools) {
+  //   tools.push({
+  //     name: t.name,
+  //     tool: t,
+  //     description: `Treasury Tool: ${t.description}`,
+  //   });
+  // }
 
   return tools;
 }
