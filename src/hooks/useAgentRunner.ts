@@ -4,6 +4,7 @@ import { TriuneAgent } from '../agent/triune-agent.js';
 import { InMemoryChatHistory } from '../utils/in-memory-chat-history.js';
 import type { HistoryItem, WorkingState } from '../components/index.js';
 import type { AgentConfig, AgentEvent, DoneEvent } from '../agent/index.js';
+import { v4 as uuidv4 } from 'uuid';
 
 // ============================================================================
 // Types
@@ -58,7 +59,7 @@ export function useAgentRunner(
         setWorkingState({ status: 'thinking' });
         updateLastHistoryItem(item => ({
           events: [...item.events, {
-            id: `thinking-${Date.now()}`,
+            id: `thinking-${uuidv4()}`,
             event,
             completed: true,
           }],
@@ -66,7 +67,7 @@ export function useAgentRunner(
         break;
 
       case 'tool_start': {
-        const toolId = `tool-${event.tool}-${Date.now()}`;
+        const toolId = `tool-${event.tool}-${uuidv4()}`;
         setWorkingState({ status: 'tool', toolName: event.tool });
         updateLastHistoryItem(item => ({
           activeToolId: toolId,
@@ -150,7 +151,7 @@ export function useAgentRunner(
     let finalAnswer: string | undefined;
 
     // Add to history immediately
-    const itemId = Date.now().toString();
+    const itemId = uuidv4();
     const startTime = Date.now();
     setHistory(prev => [...prev, {
       id: itemId,

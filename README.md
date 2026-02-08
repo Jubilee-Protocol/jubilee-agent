@@ -65,6 +65,21 @@ Jubilee can scale its attention by dispatching specialized sub-agents called **A
 ## 🏫 The School of Prophets (Skills)
 Jubilee is equipped with specialized workflows called **Skills** (e.g., `sermon-research`, `member-care`).
 
+### How to Add New Skills
+You can add new skills by creating a folder in `src/skills/` (e.g., `src/skills/my-new-skill/`) and adding a `SKILL.md` file.
+**OpenClaw** is used for *executing* tools, not defining skills. Skills are defined via these markdown files.
+
+**Example `SKILL.md` structure:**
+```markdown
+---
+name: my-new-skill
+description: A brief description of what this skill does.
+---
+# My New Skill
+Instructions for the agent...
+```
+The agent automatically discovers new skills upon restart.
+
 ## 📜 The Chronicles (Memory)
 Jubilee uses a privacy-first, local vector memory system (LanceDB) called "The Confessional".
 -   **Active Recall**: The agent automatically searches memory for relevant context *before* answering user queries.
