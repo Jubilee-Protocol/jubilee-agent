@@ -1,7 +1,8 @@
 
 import { StructuredTool } from '@langchain/core/tools';
 import { z } from 'zod';
-import { Agent, AgentConfig } from '../agent/agent.js'; // Assuming simple Agent exists or need TriuneAgent sub-runner?
+import { Agent } from '../agent/agent.js';
+import type { AgentConfig } from '../agent/types.js';
 import { getChatModel } from '../model/llm.js';
 import { getToolsForRole, getToolRegistry } from './registry.js';
 import { InMemoryChatHistory } from '../utils/in-memory-chat-history.js';
@@ -58,10 +59,9 @@ CRITICAL INSTRUCTIONS:
 You have access to: ${arg.capabilities.join(', ')}.`;
 
             const config: AgentConfig = {
-                model: 'gemini-2.0-flash', // Default to efficient model
+                model: 'gemini-2.0-flash',
                 systemPrompt,
                 tools: angelTools,
-                verbose: true
             };
 
             const agent = Agent.create(config);
