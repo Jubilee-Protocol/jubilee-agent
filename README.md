@@ -53,7 +53,21 @@ bun start
 2.  **Select Model**: Pick the model you want to use.
 3.  **Chat**: Enter your query (e.g., "Analyze the market", "Write a Python script", "Ask OpenClaw to check my logs").
 
-## 🤝 Contribution
+## � The Confessional (Local Memory)
+
+Jubilee features a privacy-first memory system stored locally:
+-   **Storage**: [LanceDB](https://lancedb.com) (Vector Database)
+-   **Privacy**: No data leaves your machine. Sensitive data (Member Care, Counseling notes) is safe.
+-   **Usage**: The agent automatically "remembers" important facts and "recalls" them during conversation.
+
+## 🦀 OpenClaw (System Capabilities)
+
+Jubilee functions as a **System Agent** via the Model Context Protocol (MCP):
+-   **Tools**: `shell_execute` (Run commands), `fs_read/write` (Manage files).
+-   **Architecture**: Runs as a local MCP server (`src/mcp/servers/openclaw`).
+-   **Safety**: Currently runs with full user privileges. Future updates will include a sandbox mode.
+
+## �🤝 Contribution
 
 We welcome contributions! Please fork the repo and submit a PR.
 

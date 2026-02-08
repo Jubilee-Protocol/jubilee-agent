@@ -3,9 +3,11 @@ import { createFinancialSearch, createFinancialMetrics, createReadFilings } from
 import { exaSearch, tavilySearch } from './search/index.js';
 import { browserTool } from './browser/index.js';
 import { skillTool, SKILL_TOOL_DESCRIPTION } from './skill.js';
-import { openClawSendMessage } from './openclaw/index.js';
 import { FINANCIAL_SEARCH_DESCRIPTION, FINANCIAL_METRICS_DESCRIPTION, WEB_SEARCH_DESCRIPTION, READ_FILINGS_DESCRIPTION, BROWSER_DESCRIPTION } from './descriptions/index.js';
 import { discoverSkills } from '../skills/index.js';
+import { McpManager } from '../mcp/index.js';
+import { RememberFactTool, RecallMemoriesTool } from './memory-tools.js';
+
 
 /**
  * A registered tool with its rich description for system prompt injection.
@@ -49,9 +51,14 @@ export function getToolRegistry(model: string): RegisteredTool[] {
       description: BROWSER_DESCRIPTION,
     },
     {
-      name: 'openclaw_send_message',
-      tool: openClawSendMessage,
-      description: 'Sends a message or command to a local OpenClaw agent instance. Use this to delegate system tasks.',
+      name: 'remember_fact',
+      tool: new RememberFactTool(),
+      description: 'System Tool: Store a fact or event in long-term memory for future recall.',
+    },
+    {
+      name: 'recall_memories',
+      tool: new RecallMemoriesTool(),
+      description: 'System Tool: Search long-term memory for relevant facts or events.',
     },
   ];
 
@@ -77,6 +84,16 @@ export function getToolRegistry(model: string): RegisteredTool[] {
       name: 'skill',
       tool: skillTool,
       description: SKILL_TOOL_DESCRIPTION,
+    });
+  }
+
+  // Include MCP Tools
+  const mcpTools = McpManager.getInstance().getTools();
+  for (const mcpTool of mcpTools) {
+    tools.push({
+      name: mcpTool.name,
+      tool: mcpTool,
+      description: mcpTool.description,
     });
   }
 
@@ -118,12 +135,13 @@ export function getToolsForRole(role: 'mind' | 'prophet' | 'will', model: string
 
   // Define allowed tools for each role
   // The Mind: Research and Analysis only. No system actions (OpenClaw) or actions that change state.
-  const mindTools = ['financial_search', 'financial_metrics', 'read_filings', 'browser', 'web_search', 'skill'];
+  const mindTools = ['financial_search', 'financial_metrics', 'read_filings', 'browser', 'web_search', 'skill', 'remember_fact', 'recall_memories'];
 
   // The Prophet: High-level trends and strategy. Similar to Mind but focused on synthesis.
-  const prophetTools = ['financial_search', 'financial_metrics', 'web_search', 'browser', 'skill'];
+  const prophetTools = ['financial_search', 'financial_metrics', 'web_search', 'browser', 'skill', 'remember_fact', 'recall_memories'];
 
   // The Will: Execution. Needs everything, including OpenClaw and specialized action tools.
+  // Note: OpenClaw system tools (shell_execute, etc.) are now loaded dynamically via MCP.
   const willTools = allTools.map(t => t.name); // All tools
 
   let allowedNames: string[] = [];
