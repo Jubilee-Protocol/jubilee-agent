@@ -56,6 +56,24 @@ bun start
 2.  **Select Model**: Pick the model you want to use.
 3.  **Chat**: Enter your query (e.g., "Analyze the market", "Write a Python script", "Ask OpenClaw to check my logs").
 
+## 🕊️ Hosts Mode ("The Lord of Hosts")
+
+Jubilee can scale its attention by dispatching specialized sub-agents called **Angels**.
+-   **Concept**: Uses the `dispatch_angel` tool to spawn a temporary, single-purpose agent.
+-   **Capabilities**: Angels can be equipped with specific tools (e.g., "web_search", "skill") and a mission.
+-   **Usage**: "The Will" automatically decides when to use this for complex, multi-step tasks.
+
+## 💰 The Almoner (Treasury)
+
+Jubilee manages on-chain assets via the **Coinbase Developer Platform (CDP) AgentKit**.
+-   **Capabilities**: Check balances, transfer assets (ETH, USDC), and interacting with contracts on **Base Mainnet**.
+-   **Configuration**: Requires a CDP API Key with "Server-Signer" (Wallet) privileges.
+    1.  Create an API Key on [CDP Portal](https://portal.cdp.coinbase.com/).
+    2.  Enable "Wallet" service for your project.
+    3.  Add `CDP_API_KEY_ID`, `CDP_API_KEY_SECRET`, and `CDP_WALLET_SECRET` to `.env`.
+    *Tip: Use `bun scripts/generate-secret.ts` to create a secure Wallet Secret.*
+
+
 ## � The Confessional (Local Memory)
 
 Jubilee features a privacy-first memory system stored locally:
