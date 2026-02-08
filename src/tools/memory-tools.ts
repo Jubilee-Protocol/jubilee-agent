@@ -1,7 +1,9 @@
 
 import { StructuredTool } from '@langchain/core/tools';
 import { z } from 'zod';
-import { MemoryManager } from '../memory/index.js';
+
+// We do NOT import MemoryManager statically here to avoid native module crash on startup
+// import { MemoryManager } from '../memory/index.js';
 
 export class RememberFactTool extends StructuredTool {
     name = 'remember_fact';
@@ -13,6 +15,8 @@ export class RememberFactTool extends StructuredTool {
 
     async _call(arg: { fact: string, tags?: string[] }): Promise<string> {
         try {
+            // Dynamic import
+            const { MemoryManager } = await import('../memory/index.js');
             const manager = MemoryManager.getInstance();
             await manager.init(); // ensure initialized
 
@@ -20,7 +24,10 @@ export class RememberFactTool extends StructuredTool {
             const id = await manager.remember(arg.fact, meta);
 
             return `Fact stored successfully. Memory ID: ${id}`;
-        } catch (e) {
+        } catch (e: any) {
+            if (e.code === 'MODULE_NOT_FOUND' || e.message?.includes('Cannot find module')) {
+                return 'Memory System Unavailable (Module Missing). Fact not stored.';
+            }
             return `Failed to store fact: ${e}`;
         }
     }
@@ -36,6 +43,8 @@ export class RecallMemoriesTool extends StructuredTool {
 
     async _call(arg: { query: string, limit?: number }): Promise<string> {
         try {
+            // Dynamic import
+            const { MemoryManager } = await import('../memory/index.js');
             const manager = MemoryManager.getInstance();
             await manager.init();
 
@@ -43,8 +52,12 @@ export class RecallMemoriesTool extends StructuredTool {
 
             if (results.length === 0) return 'No relevant memories found.';
 
-            return results.map(r => `- "${r.text}" (Relevance: ${r.score})`).join('\n');
-        } catch (e) {
+            // @ts-ignore
+            return results.map((r: any) => `- "${r.text}" (Relevance: ${r.score})`).join('\n');
+        } catch (e: any) {
+            if (e.code === 'MODULE_NOT_FOUND' || e.message?.includes('Cannot find module')) {
+                return 'Memory System Unavailable (Module Missing).';
+            }
             return `Failed to recall memories: ${e}`;
         }
     }

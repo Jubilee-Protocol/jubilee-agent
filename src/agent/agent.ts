@@ -60,12 +60,6 @@ export class Agent {
     const startTime = Date.now();
     const tokenCounter = new TokenCounter();
 
-    if (this.tools.length === 0) {
-      yield { type: 'done', answer: 'No tools available. Please check your API key configuration.', toolCalls: [], iterations: 0, totalTime: Date.now() - startTime };
-      return;
-    }
-
-    // Create scratchpad for this query - single source of truth for all work done
     const scratchpad = new Scratchpad(query);
 
     // Build initial prompt with conversation history context

@@ -7,6 +7,7 @@ import { FINANCIAL_SEARCH_DESCRIPTION, FINANCIAL_METRICS_DESCRIPTION, WEB_SEARCH
 import { discoverSkills } from '../skills/index.js';
 import { McpManager } from '../mcp/index.js';
 import { RememberFactTool, RecallMemoriesTool } from './memory-tools.js';
+import { DispatchAngelTool } from './angel-tool.js';
 
 
 /**
@@ -59,6 +60,11 @@ export function getToolRegistry(model: string): RegisteredTool[] {
       name: 'recall_memories',
       tool: new RecallMemoriesTool(),
       description: 'System Tool: Search long-term memory for relevant facts or events.',
+    },
+    {
+      name: 'dispatch_angel',
+      tool: new DispatchAngelTool(),
+      description: 'Meta Tool: Dispatch a specialized sub-agent ("Angel") to perform a complex task.',
     },
   ];
 
@@ -153,6 +159,7 @@ export function getToolsForRole(role: 'mind' | 'prophet' | 'will', model: string
 
   // The Will: Execution. Needs everything, including OpenClaw and specialized action tools.
   // Note: OpenClaw system tools (shell_execute, etc.) are now loaded dynamically via MCP.
+  // The Will gets everything, including dispatch_angel.
   const willTools = allTools.map(t => t.name); // All tools
 
   let allowedNames: string[] = [];

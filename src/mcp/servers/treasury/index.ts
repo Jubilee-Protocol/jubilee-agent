@@ -1,5 +1,5 @@
 
-import { AgentKit, CdpWalletProvider, wethActionProvider, walletActionProvider, erc20ActionProvider, pythActionProvider } from "@coinbase/agentkit";
+import { AgentKit, CdpEvmWalletProvider, wethActionProvider, walletActionProvider, erc20ActionProvider, pythActionProvider } from "@coinbase/agentkit";
 import { getLangChainTools } from "@coinbase/agentkit-langchain";
 import * as dotenv from "dotenv";
 
@@ -29,17 +29,25 @@ export class TreasuryServer {
         try {
             // Configure CDP Wallet Provider
             const config = {
-                apiKeyName: process.env.CDP_API_KEY_NAME,
-                apiKeyPrivateKey: process.env.CDP_API_KEY_PRIVATE_KEY?.replace(/\\n/g, "\n"),
-                networkId: process.env.CDP_NETWORK_ID || "base-mainnet", // default to base-sep for safety? No, user sets env.
+                apiKeyId: process.env.CDP_API_KEY_ID,
+                apiKeySecret: process.env.CDP_API_KEY_SECRET?.replace(/\\n/g, "\n"),
+                walletSecret: process.env.CDP_WALLET_SECRET,
+                networkId: process.env.CDP_NETWORK_ID || "base-mainnet",
             };
 
-            if (!config.apiKeyName || !config.apiKeyPrivateKey) {
-                console.warn("⚠️ TreasuryServer: CDP API Credentials missing. Treasury tools will be unavailable.");
+            console.log("Config Check:", {
+                hasId: !!config.apiKeyId,
+                hasSecret: !!config.apiKeySecret,
+                hasWalletSecret: !!config.walletSecret,
+                network: config.networkId
+            });
+
+            if (!config.apiKeyId || !config.apiKeySecret || !config.walletSecret) {
+                console.warn("⚠️ TreasuryServer: CDP API Credentials missing (ID, Secret, Wallet Secret). Treasury tools will be unavailable.");
                 return;
             }
 
-            const walletProvider = await CdpWalletProvider.configureWithWallet(config);
+            const walletProvider = await CdpEvmWalletProvider.configureWithWallet(config);
 
             // Initialize AgentKit
             this.agentKit = await AgentKit.from({
