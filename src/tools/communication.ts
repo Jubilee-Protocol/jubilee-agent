@@ -19,8 +19,8 @@ export class CommunicationTool extends StructuredTool {
     async _call(arg: { recipient: string, subject: string, body: string, tone?: string }): Promise<string> {
         // 1. Rate Limiting (Anti-Spam)
         const now = Date.now();
-        if (now - this.lastDraftTime < 30000) { // 30 seconds wait
-            return "⛔ RATE LIMIT: You are drafting too fast. Please wait 30 seconds.";
+        if (now - this.lastDraftTime < 2000) { // 2 seconds wait
+            return "⛔ RATE LIMIT: You are drafting too fast. Please wait 2 seconds.";
         }
         this.lastDraftTime = now;
 

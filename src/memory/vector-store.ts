@@ -58,8 +58,29 @@ export class MemoryManager {
         this.embeddings = embeddings;
     }
 
+    private isOnline = true; // Assume online until proven otherwise
+    private hasCheckedConnection = false;
+
     async init() {
+        if (this.hasCheckedConnection && !this.isOnline) return;
         if (this.db) return;
+
+        // 0. Fast Connectivity Check (3s timeout)
+        if (!this.hasCheckedConnection) {
+            try {
+                const controller = new AbortController();
+                const timeoutId = setTimeout(() => controller.abort(), 3000);
+                const response = await fetch('http://localhost:11434', { signal: controller.signal });
+                clearTimeout(timeoutId);
+                if (!response.ok) throw new Error("Ollama returned non-200");
+                this.hasCheckedConnection = true;
+            } catch (e) {
+                console.warn(`⚠️ MemoryManager: Ollama (localhost:11434) is unreachable. Disabling memory features.`);
+                this.isOnline = false;
+                this.hasCheckedConnection = true;
+                return;
+            }
+        }
 
         try {
             this.db = await lancedb.connect(this.dbPath);
@@ -69,28 +90,12 @@ export class MemoryManager {
             if (existingTables.includes(this.tableName)) {
                 this.table = await this.db.openTable(this.tableName);
             } else {
-                // Create table with empty data compliant with schema
-                // LanceDB infers schema from the first batch or provided schema.
-                // We'll insert a dummy record and then delete it, or define schema if feasible in JS client.
-                // JS client schema definition is a bit loose.
-                // Let's try creating with a dummy record.
-                const dummy: MemoryEntry = {
-                    id: 'init',
-                    text: 'init',
-                    vector: Array(1024).fill(0), // mxbai is 1024. llama2 is 4096. This is risky.
-                    // Architecture Change: We should fetch dimensionality dynamically.
-                    // But for now, let's assume 1024 (mxbai).
-                    // If we use 'llama3', it's 4096. 
-                    // Let's lazy load the table on first add to get dimensionality correct.
-                    metadata: '{}',
-                    created_at: Date.now()
-                };
-                // actually, we can't easily validte dimensionality without running the model.
-                // Let's defer creation to the first add.
+                // Defer creation to first add
             }
             console.log(`🧠 MemoryManager: Connected to ${this.dbPath}`);
         } catch (error) {
             console.error('🧠 MemoryManager Error:', error);
+            this.isOnline = false;
         }
     }
 
@@ -99,6 +104,7 @@ export class MemoryManager {
      */
     async remember(text: string, metadata: Record<string, any> = {}): Promise<string> {
         if (!this.db) await this.init();
+        if (!this.isOnline) return "Memory Offline";
 
         try {
             // 1. Generate embedding
@@ -138,6 +144,7 @@ export class MemoryManager {
      */
     async recall(query: string, limit: number = 5): Promise<{ text: string, score: number, metadata: any }[]> {
         if (!this.db) await this.init();
+        if (!this.isOnline) return [];
         if (!this.table) return []; // No memories yet
 
         try {
