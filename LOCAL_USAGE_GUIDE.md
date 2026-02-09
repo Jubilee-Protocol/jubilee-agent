@@ -1,66 +1,96 @@
-# Jubilee OS: Local Usage Guide 🛠️
+# Jubilee OS: Starship Verification Guide 🛠️
 
-Follow these steps to awaken Jubilee OS on your local machine.
+Follow these steps to test the full Jubilee OS (Terminal + UI) locally.
 
-## Prerequisites
-*   **Docker Desktop** (Installed & Running)
-*   **Bun** (Optional, for local scripts)
-*   **Node.js** (Optional)
-
-## Step 1: Configuration ⚙️
-
-1.  **Clone the Repository**:
-    ```bash
-    git clone https://github.com/jubilee-labs/jubilee-agent.git
-    cd jubilee-agent
-    ```
-
-2.  **Set Environment Variables**:
-    *   Copy `env.example` to `.env`.
-    *   Generate strong secrets:
-        ```bash
-        # If you have bun installed
-        bun run scripts/generate-secret.ts 
-        ```
-    *   Update `.env` with:
-        *   `JUBILEE_ADMIN_TOKEN` (The High Priest Key)
-        *   `JUBILEE_DB_PASSWORD` (The Vault Key)
-        *   `OPENAI_API_KEY` (The Mind)
-        *   `CDP_API_KEY_...` (The Treasury - Optional)
-
-## Step 2: The Awakening (Boot) 🚀
-
-Run the following command to start the entire Trinity (Core, Shell, Memory):
-
-```bash
-docker-compose up --build
-```
-
-**What to expect:**
-*   You will see logs from `jubilee-db` initiating Postgres.
-*   You will see `jubilee-core` running migrations (`bun run db:push`).
-*   Finally, you will see `🎙️ The Voice is speaking on port 3001`.
-
-## Step 3: Interaction 🗣️
-
-Open your browser to **[http://localhost](http://localhost)**.
-
-1.  **The Pulpit (Admin)**:
-    *   Navigate to `/pulpit`.
-    *   Enter your `JUBILEE_ADMIN_TOKEN`.
-    *   Command the agent: "Check the treasury status" or "What is your directive?"
-
-2.  **The Epistle (Public Logs)**:
-    *   The home page displays the live stream of the Agent's thoughts and actions.
-    *   Watch as the `DaemonService` wakes up automatically every 10 minutes.
-
-## Step 4: Maintenance 🧹
-
-*   **Stop the OS**: `Ctrl+C` in the terminal or `docker-compose down`.
-*   **Reset Data**: `docker-compose down -v` (Warning: Wipes the Database).
-*   **View Logs**: `docker-compose logs -f jubilee-core` to inspect the Kernel.
+## ✅ Prerequisites
+*   **Docker Desktop** (Running)
+*   **Bun** (v1.0+)
+*   **Wallet**: Coinbase Wallet or Metamask (for Treasury testing)
 
 ---
-**Troubleshooting**:
-*   *Port Conflict*: Ensure ports 80, 3000, 3001, and 5432 are free.
-*   *Database Connection*: Check `JUBILEE_DB_PASSWORD` in `.env` matches `docker-compose.yml` if you modified defaults.
+
+## 🚀 Mode 1: The Full Experience (Recommended)
+Run everything (Database, Backend, Frontend) in containers. best for "Production-like" testing.
+
+1.  **Start the System**:
+    ```bash
+    docker-compose up --build
+    ```
+2.  **Access the UI**:
+    *   Open **[http://localhost:3000](http://localhost:3000)**
+    *   **The Pulpit**: Chat with the Agent.
+    *   **The Altar**: Connect Wallet & Manage Treasury.
+3.  **Access the Terminal**:
+    *   The "Terminal Agent" is running inside the `jubilee-core` container. You can view its logs:
+    ```bash
+    docker-compose logs -f jubilee-core
+    ```
+
+---
+
+## 🛠️ Mode 2: Hybrid Dev (Frontend Focus)
+Run the Backend in Docker, but run the Frontend locally for instant changes.
+
+1.  **Start Backend & DB**:
+    ```bash
+    docker-compose up -d postgres jubilee-core
+    ```
+2.  **Start Frontend**:
+    ```bash
+    cd web
+    bun install
+    bun run dev
+    ```
+3.  **Access**: Open **[http://localhost:3000](http://localhost:3000)**.
+
+---
+
+## 💻 Mode 3: Terminal Only (CLI Agent)
+If you just want to talk to Jubilee in your terminal.
+
+1.  **Ensure DB is running**:
+    ```bash
+    docker-compose up -d postgres
+    ```
+2.  **Run Agent**:
+    ```bash
+    bun start
+    ```
+    *Select "Chat" to talk locally.*
+
+---
+
+## 🧪 Verification Checklist (Starship Features)
+
+### 1. 🏰 The Altar (Treasury)
+*   [ ] Navigate to **/altar**.
+*   [ ] Click "Connect Wallet".
+*   [ ] Verify **jUSDi** and **jBTCi** cards load (even if balances are 0).
+*   [ ] **Test Onramp**: Click the **"Buy Crypto"** button.
+    *   *Expected*: Opens Coinbase Pay in a new tab with your wallet address pre-filled.
+
+### 2. 📡 The Synod (Socials)
+*   [ ] Navigate to **/synod**.
+*   [ ] Click **"Capabilities (Skills)"**.
+*   [ ] **Test Toggles**: Find "YouTube" and "Facebook".
+    *   *Action*: Click "Connect/Disconnect".
+    *   *Expected*: Button state changes (Mock toggle).
+
+### 3. 🧠 The Archives (Memory)
+*   [ ] Navigate to **/archives**.
+*   [ ] **Test Delete**: Hover over a memory card (if any exist) and click the Trash icon.
+    *   *Expected*: Memory disappears from the list.
+
+### 4. 🚀 The Pulpit (Chat)
+*   [ ] Navigate to **/pulpit**.
+*   [ ] Login with your `JUBILEE_ADMIN_TOKEN`.
+*   [ ] **Test Chat**: Say "Hello Jubilee".
+    *   *Expected*: Agent responds with "Thinking..." then an answer.
+
+---
+
+## 🧹 Cleanup
+To stop everything and save battery:
+```bash
+docker-compose down
+```
