@@ -59,7 +59,7 @@ export class OnChainEars {
             event: eventAbi,
             onLogs: (logs) => {
                 for (const log of logs) {
-                    const { from, to, value } = log.args;
+                    const { from, to, value } = (log as any).args;
 
                     if (to && to.toLowerCase() === this.walletAddress) {
                         const amount = formatUnits(value as bigint, decimals);

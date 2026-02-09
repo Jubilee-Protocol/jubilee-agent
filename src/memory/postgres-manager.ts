@@ -1,7 +1,7 @@
 import { OpenAIEmbeddings } from '@langchain/openai';
 import { db } from '../db/index.js';
 import { memories } from '../db/schema.js';
-import { cosineDistance, desc, gt, sql } from 'drizzle-orm';
+import { cosineDistance, desc, gt, sql, eq } from 'drizzle-orm';
 import { v4 as uuidv4 } from 'uuid';
 
 export class MemoryManager {

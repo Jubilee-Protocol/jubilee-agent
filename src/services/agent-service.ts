@@ -36,7 +36,7 @@ export class AgentService {
             const agent = await TriuneAgent.create({
                 model: settings.modelName,
                 // provider: settings.modelProvider ?? 'openai', // AgentConfig doesn't use provider yet for logic, just model name prefix
-                apiKeys: settings.apiKeys
+                apiKeys: settings.apiKeys as Record<string, string>
             });
             const stream = agent.run(query, this.history);
 

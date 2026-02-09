@@ -135,9 +135,38 @@ export interface LlmResult {
   usage?: TokenUsage;
 }
 
-// ... extractUsage ...
 
-// ... buildAnthropicMessages ...
+function extractUsage(result: any): TokenUsage | undefined {
+  if (result?.usage_metadata) {
+    return {
+      inputTokens: result.usage_metadata.input_tokens ?? 0,
+      outputTokens: result.usage_metadata.output_tokens ?? 0,
+      totalTokens: result.usage_metadata.total_tokens ?? 0,
+    };
+  }
+  return undefined;
+}
+
+function buildAnthropicMessages(systemPrompt: string, userPrompt: string): any[] {
+  // Anthropic supports caching on system blocks and user messages.
+  // We'll mark the system prompt for caching (ephemeral).
+  return [
+    {
+      role: 'system',
+      content: [
+        {
+          type: 'text',
+          text: systemPrompt,
+          cache_control: { type: 'ephemeral' }
+        }
+      ]
+    },
+    {
+      role: 'user',
+      content: userPrompt
+    }
+  ];
+}
 
 export async function callLlm(prompt: string, options: CallLlmOptions = {}): Promise<LlmResult> {
   const { model = DEFAULT_MODEL, systemPrompt, outputSchema, tools, signal, apiKeys } = options;

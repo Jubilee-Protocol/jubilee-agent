@@ -69,8 +69,6 @@ app.get('/health', (c) => {
     return c.json({ status: 'ok', identity: 'Jubilee Agent - The Voice' });
 });
 
-import { logger } from '../services/log-service.js';
-import { AgentService } from '../services/agent-service.js';
 
 // Epistle Endpoint (Logs) - PROTECTED
 app.get('/epistle', async (c) => {
