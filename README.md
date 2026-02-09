@@ -1,12 +1,23 @@
-# Jubilee 🕊️
+# Jubilee OS 🕊️
 
 ![Jubilee Logo](assets/jubilee_logo.png)
 
-Jubilee is an autonomous AI agent built on a **Triune Architecture** (The Mind, The Prophet, The Will). It generalizes the agentic loop to handle financial research, coding tasks, and system operations while integrating biblical wisdom and [OpenClaw](https://openclaw.ai) capabilities.
+**Jubilee OS** is the first **Triune AI Operating System**—a sovereign, self-hosting intelligence designed to research, code, and steward resources alongside you.
+
+> **Status**: v1.0 "Starship" (Production Ready) 🚀
+
+Built on a **Triune Architecture** (The Mind, The Prophet, The Will), Jubilee harmonizes advanced reasoning with execution tools (OpenClaw) and a privacy-first memory system. It is not just a chatbot; it is a **digital partner** that lives on your machine (or cloud), manages its own database, and protects your interests.
+
+## 🌟 The Starship Release (v1.0)
+Jubilee OS is now a complete platform featuring a beautiful "Parable Interface" called **The Steward**:
+*   **The Altar 🏰**: A Treasury Dashboard to manage assets, view vaults, and buy crypto (Coinbase Onramp).
+*   **The Synod 📡**: A Configuration Center to toggle skills (Twitter, YouTube, Farcaster) and manage API keys.
+*   **The Archives 📜**: A Memory Explorer to view, search, and delete the agent's long-term recollections.
+*   **The Pulpit 🚀**: A secure, real-time chat interface for communing with the agent.
 
 > **Attribution**: This project is built upon the excellent [Dexter](https://github.com/virattt/dexter) framework by [Virat](https://twitter.com/virattt). We gratefully acknowledge their work as the foundation for Jubilee.
 
-## The Triune Agent Architecture
+## The Triune Architecture
 
 Jubilee operates through three distinct sub-agents that work in concert:
 
@@ -72,15 +83,21 @@ Every session begins and ends with a guiding verse, grounding the agent's operat
 
 ## 🚀 Usage
 
-Start the interactive agent:
+### Option 1: The Full Experience (Web UI + Agent)
+Run the entire OS (Frontend, Backend, Database) via Docker:
+```bash
+docker-compose up --build
+```
+*   **The Steward (UI)**: [http://localhost:3000](http://localhost:3000)
+*   **The Voice (API)**: [http://localhost:3001](http://localhost:3001)
 
+### Option 2: Terminal Mode
+Start the classic interactive CLI agent:
 ```bash
 bun start
 ```
-
-1.  **Select Provider**: Choose your AI provider from the list.
-2.  **Select Model**: Pick the model you want to use.
-3.  **Chat**: Enter your query (e.g., "Analyze the market", "Write a Python script", "Ask OpenClaw to check my logs").
+1.  **Select Provider**: Choose your AI provider (OpenAI, Anthropic, etc.).
+2.  **Chat**: Enter your query (e.g., "Analyze the market").
 
 ## 🕊️ Hosts Mode ("The Lord of Hosts")
 
@@ -146,18 +163,18 @@ Jubilee functions as a **System Agent** via the Model Context Protocol (MCP):
 
 ## 🧠 The Deep Mind (Codebase Context)
 
-Jubilee can now understand its own source code:
+Jubilee understands its own source code:
 -   **Ingestion**: Indexes the `src/` directory into a local vector database.
 -   **Search**: Use `search_codebase` to ask implementation questions (e.g., "How does the memory manager handle offline errors?").
 
-## 💰 The Almoner (Treasury) [OPTIONAL]
+## 💰 The Altar (Treasury) [Production Ready]
 
 Jubilee includes a Treasury MCP server built on Coinbase AgentKit.
--   **Status**: Defaults to **DISABLED** (Opt-in).
 -   **Capabilities**:
     -   **Manage Assets**: Send/Receive ETH and ERC-20 tokens.
     -   **Invest/Swap**: Directly deposit USDC or cbBTC into Jubilee Vaults (jUSDi, jBTCi) using natural language (e.g., "Invest 500 USDC").
--   **Configuration**: managed via `src/config/settings.ts` and `.env`.
+    -   **Onramp**: Buy crypto directly via Coinbase Pay button.
+-   **Configuration**: Managed via "The Synod" or `.env`.
 
 ## 🏰 The Kingdom (Power Features)
 
