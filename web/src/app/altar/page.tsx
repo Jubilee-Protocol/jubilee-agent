@@ -85,6 +85,10 @@ export default function AltarPage() {
                     <ConnectButton />
                 </div>
             </header>
+            {/* Help Text for Onramp */}
+            <p className="text-xs text-stone-400 text-right -mt-6 mb-8">
+                Trouble with Onramp? Ensure <strong>Secure Initialization</strong> is disabled in CDP.
+            </p>
 
             {!isConnected ? (
                 <div className="bg-stone-50 border border-stone-200 rounded-xl p-12 text-center">

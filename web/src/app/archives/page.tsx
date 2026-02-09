@@ -1,8 +1,9 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Search, Database, Calendar, Trash2, Loader2 } from 'lucide-react';
+import { OnboardingScreen } from '@/components/OnboardingScreen';
 
 // Using the same Read Token as other components
 const READ_TOKEN = process.env.NEXT_PUBLIC_READ_TOKEN || 'public_read';
@@ -17,29 +18,45 @@ interface Memory {
 
 export default function ArchivesPage() {
     const [searchQuery, setSearchQuery] = useState('');
+    const [token, setToken] = useState<string | null>(null);
     const queryClient = useQueryClient();
 
+    // Check for token on mount
+    useEffect(() => {
+        const t = localStorage.getItem('JUBILEE_ADMIN_TOKEN');
+        setToken(t);
+    }, []);
+
     const { data, isLoading, error } = useQuery({
-        queryKey: ['memories', searchQuery],
+        queryKey: ['memories', searchQuery, token],
         queryFn: async () => {
+            // Use Admin Token if available, otherwise fallback to Read Token
+            const authHeader = token || READ_TOKEN;
+
             const res = await fetch(`http://localhost:3001/memory?q=${encodeURIComponent(searchQuery)}`, {
                 headers: {
-                    'Authorization': `Bearer ${READ_TOKEN}`
+                    'Authorization': `Bearer ${authHeader}`
                 }
             });
-            if (!res.ok) throw new Error('Failed to fetch memories');
-            // Backwards compatibility check if backend returns strings (shouldn't happen now)
+            if (!res.ok) {
+                if (res.status === 401) throw new Error('Unauthorized');
+                throw new Error('Failed to fetch memories');
+            }
             const json = await res.json();
             return json as { results: Memory[] };
-        }
+        },
+        // Only run if we have some token (read token is always there as fallback, but logic ok)
+        retry: false
     });
 
     const deleteMutation = useMutation({
         mutationFn: async (id: number) => {
+            if (!token) throw new Error('Admin Token required for deletion');
+
             const res = await fetch(`http://localhost:3001/memory/${id}`, {
                 method: 'DELETE',
                 headers: {
-                    'Authorization': `Bearer ${ADMIN_TOKEN}` // Admin Token Required
+                    'Authorization': `Bearer ${token}`
                 }
             });
             if (!res.ok) {
@@ -52,9 +69,17 @@ export default function ArchivesPage() {
             queryClient.invalidateQueries({ queryKey: ['memories'] });
         },
         onError: (err) => {
-            alert(`Failed to delete: ${err.message}. Ensure NEXT_PUBLIC_ADMIN_TOKEN is set.`);
+            alert(`Failed to delete: ${err.message}`);
         }
     });
+
+    // If unauthorized error, show onboarding
+    if (error && error.message === 'Unauthorized') {
+        return <OnboardingScreen onComplete={(t) => {
+            setToken(t);
+            // Query will auto-refetch due to key change
+        }} />;
+    }
 
     return (
         <div className="p-8 max-w-6xl mx-auto">
@@ -111,7 +136,7 @@ export default function ArchivesPage() {
                                     </div>
                                 </div>
                                 {/* Delete Button */}
-                                {typeof mem !== 'string' && (
+                                {typeof mem !== 'string' && token && (
                                     <button
                                         onClick={() => {
                                             if (confirm('Are you sure you want to forget this memory?')) {

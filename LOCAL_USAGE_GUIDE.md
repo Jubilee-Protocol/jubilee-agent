@@ -9,12 +9,22 @@ Follow these steps to test the full Jubilee OS (Terminal + UI) locally.
 
 ---
 
+## 🔑 First Run: Onboarding
+
+When you first access the apps (Pulpit, Synod, Archives), you will see the **Onboarding Screen**.
+1.  **Enter your `Admin Token`**: This is defined in your `.env` as `JUBILEE_ADMIN_TOKEN`.
+2.  If you don't have one set, check the terminal output from the backend—it prints the token on startup if it's auto-generated, or warns you if it's missing.
+
+> **Note**: This token is saved to your browser's LocalStorage for convenience.
+
+---
+
 ## 🚀 Mode 1: The Full Experience (Recommended)
 Run everything (Database, Backend, Frontend) in containers. best for "Production-like" testing.
 
 1.  **Start the System**:
     ```bash
-    docker-compose up --build
+    docker compose up --build
     ```
 2.  **Access the UI**:
     *   Open **[http://localhost:3000](http://localhost:3000)**
@@ -23,7 +33,7 @@ Run everything (Database, Backend, Frontend) in containers. best for "Production
 3.  **Access the Terminal**:
     *   The "Terminal Agent" is running inside the `jubilee-core` container. You can view its logs:
     ```bash
-    docker-compose logs -f jubilee-core
+    docker compose logs -f jubilee-core
     ```
 
 ---
@@ -33,7 +43,7 @@ Run the Backend in Docker, but run the Frontend locally for instant changes.
 
 1.  **Start Backend & DB**:
     ```bash
-    docker-compose up -d postgres jubilee-core
+    docker compose up -d postgres jubilee-core
     ```
 2.  **Start Frontend**:
     ```bash
@@ -50,7 +60,7 @@ If you just want to talk to Jubilee in your terminal.
 
 1.  **Ensure DB is running**:
     ```bash
-    docker-compose up -d postgres
+    docker compose up -d postgres
     ```
 2.  **Run Agent**:
     ```bash
@@ -92,5 +102,22 @@ If you just want to talk to Jubilee in your terminal.
 ## 🧹 Cleanup
 To stop everything and save battery:
 ```bash
-docker-compose down
+docker compose down
 ```
+
+## 🔧 Troubleshooting
+
+### Docker "input/output error" or "failed to commit snapshot"
+This is a common issue with Docker Desktop on Mac.
+1.  **Restart Docker Desktop**: Click the whale icon -> specific -> Restart.
+2.  **Prune System**: If restart fails, run this to clear corrupted cache:
+    ```bash
+    docker system prune -a
+    ```
+3.  **Try Again**: Run `docker compose up --build`.
+
+### Port Conflicts (bind: address already in use)
+If you see errors about ports 3000, 3001, or 5432:
+1.  Stop all other terminal processes (Ctrl+C).
+2.  Run `lsof -i :3000` to see what's using the port.
+3.  Kill it with `kill -9 <PID>`.

@@ -29,7 +29,7 @@ Every session begins and ends with a guiding verse, grounding the agent's operat
 
 ## Features
 
--   **Interactive Setup**: Automatically detects your AI provider (OpenAI, Anthropic, Google, etc.) and prompts for API keys if missing.
+-   **Interactive Onboarding**: New "Steward" UI guides you through setting up your Admin Token and API keys seamlessly.
 -   **OpenClaw Integration**: Can delegate system-level tasks to a local [OpenClaw](https://github.com/openclaw/openclaw) instance.
 -   **Hosts Mode ("The Lord of Hosts")**: "The Will" can dispatch specialized sub-agents ("Angels") for parallel, isolated tasks (e.g., "Research Angel", "Coder Angel").
 -   **Multi-Model Support**: Switch between GPT-4, Claude 3.5 Sonnet, Gemini Pro, and more on the fly.
@@ -86,7 +86,7 @@ Every session begins and ends with a guiding verse, grounding the agent's operat
 ### Option 1: The Full Experience (Web UI + Agent)
 Run the entire OS (Frontend, Backend, Database) via Docker:
 ```bash
-docker-compose up --build
+docker compose up --build
 ```
 *   **The Steward (UI)**: [http://localhost:3000](http://localhost:3000)
 *   **The Voice (API)**: [http://localhost:3001](http://localhost:3001)

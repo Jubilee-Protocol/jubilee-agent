@@ -70,8 +70,14 @@ export class AgentService {
             }
 
         } catch (error: any) {
-            logger.addLog('ERROR', `Agent Crash: ${error.message}`);
-            yield { type: 'error', error: error.message };
+            if (error.message && error.message.includes('API_KEY')) {
+                const msg = "My voice is faint. Please visit The Synod to grant me an API Key for the selected model.";
+                logger.addLog('SYSTEM', msg);
+                yield { type: 'error', error: msg };
+            } else {
+                logger.addLog('ERROR', `Agent Crash: ${error.message}`);
+                yield { type: 'error', error: error.message };
+            }
         } finally {
             this.isRunning = false;
         }

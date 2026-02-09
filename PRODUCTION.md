@@ -15,7 +15,7 @@ We use Nginx as a reverse proxy ("The Gateway").
 
 1. **Start the OS**:
    ```bash
-   docker-compose up --build -d
+   docker compose up --build -d
    ```
 2. **Access**:
    *   **Frontend**: `http://localhost` (Port 80)

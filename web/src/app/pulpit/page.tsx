@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef } from 'react';
 import { LogOut } from 'lucide-react';
+import { OnboardingScreen } from '@/components/OnboardingScreen';
 
 const AGENT_API = process.env.NEXT_PUBLIC_VOICE_URL || 'http://localhost:3001';
 
@@ -125,30 +126,10 @@ export default function ThePulpit() {
     };
 
     if (!isAuthenticated) {
-        return (
-            <main className="min-h-screen flex items-center justify-center bg-[#fdfbf7] p-4">
-                <div className="bg-white p-8 rounded-2xl shadow-xl border border-stone-200 w-full max-w-md">
-                    <h1 className="font-serif text-2xl text-stone-900 mb-2 text-center">The Pulpit</h1>
-                    <p className="text-stone-500 text-center mb-6 text-sm">Enter the High Priest Key to commune.</p>
-
-                    <form onSubmit={handleLogin} className="space-y-4">
-                        <input
-                            type="password"
-                            value={token}
-                            onChange={(e) => setToken(e.target.value)}
-                            placeholder="Admin Token"
-                            className="w-full p-3 border border-stone-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-jubilee-pink"
-                        />
-                        <button
-                            type="submit"
-                            className="w-full bg-jubilee-pink text-white py-3 rounded-lg font-bold hover:bg-pink-600 transition-colors"
-                        >
-                            Enter The Pulpit
-                        </button>
-                    </form>
-                </div>
-            </main>
-        );
+        return <OnboardingScreen onComplete={(t) => {
+            setToken(t);
+            setIsAuthenticated(true);
+        }} />;
     }
 
     return (

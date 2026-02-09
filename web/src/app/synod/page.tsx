@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Activity, Power, Shield, Settings, Key, ExternalLink, Save } from 'lucide-react';
+import { OnboardingScreen } from '@/components/OnboardingScreen';
 
 const READ_TOKEN = process.env.NEXT_PUBLIC_READ_TOKEN || 'public_read';
 // For writing settings, we might need ADMIN token? 
@@ -108,7 +109,9 @@ export default function SynodPage() {
     };
 
     if (!adminToken) {
-        return <div className="p-8 text-center text-stone-500">Please authenticate in The Pulpit or set JUBILEE_ADMIN_TOKEN in localStorage.</div>;
+        if (!adminToken) {
+            return <OnboardingScreen onComplete={(token) => setAdminToken(token)} />;
+        }
     }
 
     if (isLoading) return <div className="p-8 text-center animate-pulse">Consulting the Synod...</div>;
