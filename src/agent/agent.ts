@@ -26,6 +26,7 @@ export class Agent {
   private readonly toolMap: Map<string, StructuredToolInterface>;
   private readonly systemPrompt: string;
   private readonly signal?: AbortSignal;
+  private readonly apiKeys?: Record<string, string>;
 
   private constructor(
     config: AgentConfig,
@@ -39,6 +40,7 @@ export class Agent {
     this.toolMap = new Map(tools.map(t => [t.name, t]));
     this.systemPrompt = systemPrompt;
     this.signal = config.signal;
+    this.apiKeys = config.apiKeys;
   }
 
   /**
@@ -194,6 +196,7 @@ export class Agent {
       systemPrompt: this.systemPrompt,
       tools: useTools ? this.tools : undefined,
       signal: this.signal,
+      apiKeys: this.apiKeys,
     });
     return { response: result.response, usage: result.usage };
   }

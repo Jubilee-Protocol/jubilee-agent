@@ -1,0 +1,10 @@
+[build]
+  base = "web"
+  command = "npm install && npm run build"
+  publish = ".next"
+
+[[plugins]]
+  package = "@netlify/plugin-nextjs"
+
+[context.production.environment]
+  NEXT_PUBLIC_VOICE_URL = "https://jubilee-voice-production.up.railway.app" # Placeholder, user needs to update

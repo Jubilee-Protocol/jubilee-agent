@@ -1,2 +1,2 @@
 
-export * from './vector-store.js';
+export * from './postgres-manager.js';

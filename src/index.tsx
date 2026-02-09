@@ -55,6 +55,10 @@ try {
     console.error('Failed to initialize Treasury Server:', e);
 }
 
+// Initialize "The Voice" API
+import { startVoiceServer } from './server/index.js';
+startVoiceServer(3001);
+
 // Render the CLI app and wait for it to exit
 // This keeps the process alive until the user exits
 const { waitUntilExit } = render(<CLI />);

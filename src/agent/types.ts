@@ -16,6 +16,8 @@ export interface AgentConfig {
   maxIterations?: number;
   /** AbortSignal for cancelling agent execution */
   signal?: AbortSignal;
+  /** API Key overrides */
+  apiKeys?: Record<string, string>;
 }
 
 /**

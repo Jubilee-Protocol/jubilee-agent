@@ -50,43 +50,47 @@ interface ModelOpts {
   streaming: boolean;
 }
 
-type ModelFactory = (name: string, opts: ModelOpts) => BaseChatModel;
+type ModelFactory = (name: string, opts: ModelOpts, apiKeys?: Record<string, string>) => BaseChatModel;
 
-function getApiKey(envVar: string, providerName: string): string {
+function getApiKey(envVar: string, providerName: string, overrides?: Record<string, string>): string {
+  // Check override first
+  if (overrides && overrides[envVar]) {
+    return overrides[envVar];
+  }
   const apiKey = process.env[envVar];
   if (!apiKey) {
-    throw new Error(`${envVar} not found in environment variables`);
+    throw new Error(`${envVar} not found in environment variables (and no override provided)`);
   }
   return apiKey;
 }
 
 const MODEL_PROVIDERS: Record<string, ModelFactory> = {
-  'claude-': (name, opts) =>
+  'claude-': (name, opts, apiKeys) =>
     new ChatAnthropic({
       model: name,
       ...opts,
-      apiKey: getApiKey('ANTHROPIC_API_KEY', 'Anthropic'),
+      apiKey: getApiKey('ANTHROPIC_API_KEY', 'Anthropic', apiKeys),
     }),
-  'gemini-': (name, opts) =>
+  'gemini-': (name, opts, apiKeys) =>
     new ChatGoogleGenerativeAI({
       model: name,
       ...opts,
-      apiKey: getApiKey('GOOGLE_API_KEY', 'Google'),
+      apiKey: getApiKey('GOOGLE_API_KEY', 'Google', apiKeys),
     }),
-  'grok-': (name, opts) =>
+  'grok-': (name, opts, apiKeys) =>
     new ChatOpenAI({
       model: name,
       ...opts,
-      apiKey: getApiKey('XAI_API_KEY', 'xAI'),
+      apiKey: getApiKey('XAI_API_KEY', 'xAI', apiKeys),
       configuration: {
         baseURL: 'https://api.x.ai/v1',
       },
     }),
-  'openrouter:': (name, opts) =>
+  'openrouter:': (name, opts, apiKeys) =>
     new ChatOpenAI({
       model: name.replace(/^openrouter:/, ''),
       ...opts,
-      apiKey: getApiKey('OPENROUTER_API_KEY', 'OpenRouter'),
+      apiKey: getApiKey('OPENROUTER_API_KEY', 'OpenRouter', apiKeys),
       configuration: {
         baseURL: 'https://openrouter.ai/api/v1',
       },
@@ -99,21 +103,22 @@ const MODEL_PROVIDERS: Record<string, ModelFactory> = {
     }),
 };
 
-const DEFAULT_MODEL_FACTORY: ModelFactory = (name, opts) =>
+const DEFAULT_MODEL_FACTORY: ModelFactory = (name, opts, apiKeys) =>
   new ChatOpenAI({
     model: name,
     ...opts,
-    apiKey: getApiKey('OPENAI_API_KEY', 'OpenAI'),
+    apiKey: getApiKey('OPENAI_API_KEY', 'OpenAI', apiKeys),
   });
 
 export function getChatModel(
   modelName: string = DEFAULT_MODEL,
-  streaming: boolean = false
+  streaming: boolean = false,
+  apiKeys?: Record<string, string>
 ): BaseChatModel {
   const opts: ModelOpts = { streaming };
   const prefix = Object.keys(MODEL_PROVIDERS).find((p) => modelName.startsWith(p));
   const factory = prefix ? MODEL_PROVIDERS[prefix] : DEFAULT_MODEL_FACTORY;
-  return factory(modelName, opts);
+  return factory(modelName, opts, apiKeys);
 }
 
 interface CallLlmOptions {
@@ -122,6 +127,7 @@ interface CallLlmOptions {
   outputSchema?: z.ZodType<unknown>;
   tools?: StructuredToolInterface[];
   signal?: AbortSignal;
+  apiKeys?: Record<string, string>;
 }
 
 export interface LlmResult {
@@ -129,59 +135,15 @@ export interface LlmResult {
   usage?: TokenUsage;
 }
 
-function extractUsage(result: unknown): TokenUsage | undefined {
-  if (!result || typeof result !== 'object') return undefined;
-  const msg = result as Record<string, unknown>;
+// ... extractUsage ...
 
-  const usageMetadata = msg.usage_metadata;
-  if (usageMetadata && typeof usageMetadata === 'object') {
-    const u = usageMetadata as Record<string, unknown>;
-    const input = typeof u.input_tokens === 'number' ? u.input_tokens : 0;
-    const output = typeof u.output_tokens === 'number' ? u.output_tokens : 0;
-    const total = typeof u.total_tokens === 'number' ? u.total_tokens : input + output;
-    return { inputTokens: input, outputTokens: output, totalTokens: total };
-  }
-
-  const responseMetadata = msg.response_metadata;
-  if (responseMetadata && typeof responseMetadata === 'object') {
-    const rm = responseMetadata as Record<string, unknown>;
-    if (rm.usage && typeof rm.usage === 'object') {
-      const u = rm.usage as Record<string, unknown>;
-      const input = typeof u.prompt_tokens === 'number' ? u.prompt_tokens : 0;
-      const output = typeof u.completion_tokens === 'number' ? u.completion_tokens : 0;
-      const total = typeof u.total_tokens === 'number' ? u.total_tokens : input + output;
-      return { inputTokens: input, outputTokens: output, totalTokens: total };
-    }
-  }
-
-  return undefined;
-}
-
-/**
- * Build messages with Anthropic cache_control on the system prompt.
- * Marks the system prompt as ephemeral so Anthropic caches the prefix,
- * reducing input token costs by ~90% on subsequent calls.
- */
-function buildAnthropicMessages(systemPrompt: string, userPrompt: string) {
-  return [
-    new SystemMessage({
-      content: [
-        {
-          type: 'text' as const,
-          text: systemPrompt,
-          cache_control: { type: 'ephemeral' },
-        },
-      ],
-    }),
-    new HumanMessage(userPrompt),
-  ];
-}
+// ... buildAnthropicMessages ...
 
 export async function callLlm(prompt: string, options: CallLlmOptions = {}): Promise<LlmResult> {
-  const { model = DEFAULT_MODEL, systemPrompt, outputSchema, tools, signal } = options;
+  const { model = DEFAULT_MODEL, systemPrompt, outputSchema, tools, signal, apiKeys } = options;
   const finalSystemPrompt = systemPrompt || DEFAULT_SYSTEM_PROMPT;
 
-  const llm = getChatModel(model, false);
+  const llm = getChatModel(model, false, apiKeys);
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   let runnable: Runnable<any, any> = llm;

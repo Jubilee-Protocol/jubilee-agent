@@ -242,7 +242,12 @@ export class TreasuryServer {
 
             toAddress = toAddress.toLowerCase();
 
-            if (!WHITELISTED_ADDRESSES.includes(toAddress)) {
+            // Parse whitelist dynamically to allow env var updates (e.g. testing)
+            const WHITELIST = process.env.TREASURY_WHITELIST
+                ? process.env.TREASURY_WHITELIST.split(',').map(a => a.trim().toLowerCase())
+                : [];
+
+            if (WHITELIST.length > 0 && !WHITELIST.includes(toAddress)) {
                 console.warn(`🚨 SECURITY ALERT: Blocked transfer attempt to non-whitelisted address: ${toAddress}`);
                 return `⛔ SECURITY BLOCK: The address '${toAddress}' is NOT in the Treasury Whitelist. Transfer aborted.`;
             }

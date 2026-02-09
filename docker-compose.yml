@@ -1,0 +1,78 @@
+version: '3.8'
+
+services:
+  # The Kernel (Agent + API)
+  jubilee-core:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "3001:3001"
+    environment:
+      - NODE_ENV=production
+      - JUBILEE_ADMIN_TOKEN=${JUBILEE_ADMIN_TOKEN:-admin_password}
+      - JUBILEE_READ_TOKEN=${JUBILEE_READ_TOKEN:-public_read}
+      # Pass through other keys
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+      - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY}
+      - CDP_API_KEY_NAME=${CDP_API_KEY_NAME}
+      - CDP_API_KEY_PRIVATE_KEY=${CDP_API_KEY_PRIVATE_KEY}
+      - NETWORK_ID=${NETWORK_ID:-base-mainnet}
+      - DATABASE_URL=postgres://jubilee:${JUBILEE_DB_PASSWORD:-jubilee123}@jubilee-db:5432/jubilee_os
+    volumes:
+      - ./data:/app/data
+      - ./logs:/app/logs
+    depends_on:
+      jubilee-db:
+        condition: service_healthy
+    command: [ "sh", "-c", "bun run db:push && bun run src/index.tsx" ]
+
+  # The Shell (Frontend)
+  jubilee-shell:
+    build:
+      context: ./web
+      dockerfile: Dockerfile
+    ports:
+      - "3000:3000"
+    environment:
+      - NEXT_PUBLIC_READ_TOKEN=${JUBILEE_READ_TOKEN:-public_read}
+      # In Docker network, the component name is the hostname
+      # But checking client-side (browser) vs server-side (SSG) fetching
+      # Browser -> needs public URL. Docker -> needs container URL.
+      # For now, we assume simple localhost mapping or browser access.
+      # If SSR fetch happens, it needs http://jubilee-core:3001
+    depends_on:
+      - jubilee-core
+
+  # The Memory (Database)
+  jubilee-db:
+    image: pgvector/pgvector:pg16
+    restart: always
+    environment:
+      POSTGRES_USER: jubilee
+      POSTGRES_PASSWORD: ${JUBILEE_DB_PASSWORD:-jubilee123}
+      POSTGRES_DB: jubilee_os
+    ports:
+      - "5432:5432"
+    volumes:
+      - jubilee_db_data:/var/lib/postgresql/data
+    healthcheck:
+      test: [ "CMD-SHELL", "pg_isready -U jubilee -d jubilee_os" ]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  # The Gateway (Nginx)
+  jubilee-gateway:
+    image: nginx:alpine
+    ports:
+      - "80:80"
+      # - "443:443" # Uncomment for SSL
+    volumes:
+      - ./nginx/default.conf:/etc/nginx/conf.d/default.conf
+    depends_on:
+      - jubilee-shell
+      - jubilee-core
+
+volumes:
+  jubilee_db_data:

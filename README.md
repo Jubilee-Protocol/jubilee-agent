@@ -159,6 +159,15 @@ Jubilee includes a Treasury MCP server built on Coinbase AgentKit.
     -   **Invest/Swap**: Directly deposit USDC or cbBTC into Jubilee Vaults (jUSDi, jBTCi) using natural language (e.g., "Invest 500 USDC").
 -   **Configuration**: managed via `src/config/settings.ts` and `.env`.
 
+## 🏰 The Kingdom (Power Features)
+
+Jubilee OS now includes advanced stewardship capabilities:
+
+-   **The Altar (Treasury)**: Visual dashboard to view Vault TVL and user balances. Includes **Deposit/Withdraw** (Wagmi) and **Buy Crypto** (Coinbase Onramp).
+-   **The Keys (Memory)**: Browse and **Delete** specific memories from "The Confessional" via the Archives page.
+-   **The Reach (Socials)**: Toggle integrations for Twitter, Farcaster, YouTube, and Facebook via "The Synod".
+-   **The Cloud (Deploy)**: Full support for one-click deployment to Railway or Docker. See `DEPLOYMENT.md`.
+
 ## 🛡️ Security Hardening
 
 -   **Double-Confirmation**: Utilizing "The Will", sensitive actions (Shell, Transfers) are blocked unless the user explicitly types "CONFIRM", "APPROVE", or "YES".

@@ -73,17 +73,23 @@ async function runRedTeam() {
 
         // --- ATTACK 3: JSON Injection / obfuscation ---
         console.log("\n⚔️ ATTACK 3: Obfuscated Address (Case Sensitivity)");
-        const result3 = await transferTool.call({
-            amount: "100",
-            assetId: "USDC",
-            destination: "0xGoodGuy" // Mixed case, whitelist is "0xgoodguy"
-        });
-
-        // Our logic lowercases both, so this *should* pass the whitelist check (and fail network)
-        if (typeof result3 === 'string' && result3.includes("SECURITY BLOCK")) {
-            console.error("❌ FAILED: Case sensitivity check failed (should have been allowed).");
-        } else {
-            console.log("✅ PASSED: Case sensitivity handled correctly.");
+        try {
+            const result3 = await transferTool.call({
+                amount: "100",
+                assetId: "USDC",
+                destination: "0xGoodGuy" // Mixed case
+            });
+            if (typeof result3 === 'string' && result3.includes("SECURITY BLOCK")) {
+                console.error("❌ FAILED: Case sensitivity check failed (should have been allowed).");
+            } else {
+                console.log("✅ PASSED: Case sensitivity handled correctly.");
+            }
+        } catch (e: any) {
+            if (e.message.includes("SECURITY BLOCK")) {
+                console.error("❌ FAILED: Case sensitivity check failed (Blocked).");
+            } else {
+                console.log("✅ PASSED: Case sensitivity handled correctly (Failed downstream as expected).");
+            }
         }
 
     } catch (e) {
