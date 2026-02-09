@@ -47,13 +47,13 @@ try {
     console.error('Failed to initialize MCP Manager:', e);
 }
 
-// Initialize Treasury (The Almoner) -- DISABLED per user request
-// import { TreasuryServer } from './mcp/servers/treasury/index.js';
-// try {
-//     await TreasuryServer.getInstance().init();
-// } catch (e) {
-//     console.error('Failed to initialize Treasury Server:', e);
-// }
+// Initialize Treasury (The Almoner)
+import { TreasuryServer } from './mcp/servers/treasury/index.js';
+try {
+    await TreasuryServer.getInstance().init();
+} catch (e) {
+    console.error('Failed to initialize Treasury Server:', e);
+}
 
 // Render the CLI app and wait for it to exit
 // This keeps the process alive until the user exits

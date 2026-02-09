@@ -16,6 +16,8 @@ import * as fs from 'fs';
 import * as path from 'path';
 import { encodeFunctionData, parseUnits, formatUnits } from 'viem';
 
+import { JUBILEE_VAULTS, SUPPORTED_ASSETS, TREASURY_CONFIG } from '../../../config/assets.js';
+
 // Whitelist of allowed addresses for outgoing transfers (Mainnet)
 const WHITELISTED_ADDRESSES = process.env.TREASURY_WHITELIST
     ? process.env.TREASURY_WHITELIST.split(',').map(a => a.trim().toLowerCase())
@@ -23,16 +25,6 @@ const WHITELISTED_ADDRESSES = process.env.TREASURY_WHITELIST
 
 const WALLET_DATA_FILE = path.join(process.cwd(), 'data', 'wallet_data.json');
 
-// Jubilee Protocol Constants (Base Mainnet)
-const VAULTS = {
-    'jUSDi': process.env.JUSDI_ADDRESS || '0x26c39532C0dD06C0c4EddAeE36979626b16c77aC',
-    'jBTCi': process.env.JBTCI_ADDRESS || '0x8a4C0254258F0D3dB7Bc5C5A43825Bb4EfC81337'
-};
-
-const ASSETS = {
-    'USDC': { address: '0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913', decimals: 6 },
-    'cbBTC': { address: '0xcbB7C00004C138A352019370adAb877192AC3112', decimals: 8 }
-};
 
 const ERC20_APPROVE_ABI = [{
     name: 'approve',
@@ -53,6 +45,7 @@ const VAULT_DEPOSIT_ABI = [{
 export class TreasuryServer {
     private static instance: TreasuryServer;
     private agentKit: AgentKit | null = null;
+    private walletProvider: CdpEvmWalletProvider | null = null;
     private tools: StructuredToolInterface[] = [];
     private networkId: string;
 
@@ -110,7 +103,7 @@ export class TreasuryServer {
                 config.cdpWalletData = walletDataStr;
             }
 
-            const walletProvider = await CdpEvmWalletProvider.configureWithWallet(config);
+            this.walletProvider = await CdpEvmWalletProvider.configureWithWallet(config);
 
             // Action Providers
             const actionProviders = [
@@ -122,14 +115,14 @@ export class TreasuryServer {
 
             // Initialize AgentKit with the provider and actions
             this.agentKit = await AgentKit.from({
-                walletProvider,
+                walletProvider: this.walletProvider,
                 actionProviders
             });
 
             // Persistence: Save Wallet Data (if new)
-            if (!walletDataStr) {
+            if (!walletDataStr && this.walletProvider) {
                 try {
-                    const data = await walletProvider.exportWallet();
+                    const data = await this.walletProvider.exportWallet();
                     // Ensure data dir exists
                     const dataDir = path.dirname(WALLET_DATA_FILE);
                     if (!fs.existsSync(dataDir)) {
@@ -161,10 +154,11 @@ export class TreasuryServer {
                 }
 
                 async _call(arg: { vault: string, asset: string, amount: string }): Promise<string> {
-                    const vaultAddr = VAULTS[arg.vault as keyof typeof VAULTS];
-                    if (!vaultAddr) return `Error: No address found for vault ${arg.vault}`;
+                    const vaultInfo = JUBILEE_VAULTS[arg.vault as keyof typeof JUBILEE_VAULTS];
+                    if (!vaultInfo) return `Error: No config found for vault ${arg.vault}`;
+                    const vaultAddr = vaultInfo.address;
 
-                    const assetInfo = ASSETS[arg.asset as keyof typeof ASSETS];
+                    const assetInfo = SUPPORTED_ASSETS[arg.asset as keyof typeof SUPPORTED_ASSETS];
                     if (!assetInfo) return `Error: Unknown asset ${arg.asset}`;
 
                     try {
@@ -208,7 +202,9 @@ export class TreasuryServer {
 
             // Get Tools
             const tools = await getLangChainTools(this.agentKit);
-            tools.push(new InvestInJubileeTool(walletProvider)); // Pass config.walletProvider which is in scope!
+            if (this.walletProvider) {
+                tools.push(new InvestInJubileeTool(this.walletProvider));
+            }
 
             // Filter and Wrap Tools
             this.tools = tools.map(tool => {
@@ -260,6 +256,18 @@ export class TreasuryServer {
         };
 
         return wrappedTool as any;
+    }
+
+    async getWalletAddress(): Promise<string | null> {
+        if (this.walletProvider) {
+            try {
+                return await this.walletProvider.getAddress();
+            } catch (e) {
+                console.error("Failed to get wallet address from provider", e);
+                return null;
+            }
+        }
+        return null;
     }
 
     getTools(): StructuredToolInterface[] {

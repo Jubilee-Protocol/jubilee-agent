@@ -25,6 +25,7 @@ export interface UseAgentRunnerResult {
   runQuery: (query: string) => Promise<RunQueryResult | undefined>;
   cancelExecution: () => void;
   setError: (error: string | null) => void;
+  injectMessage: (query: string, answer: string) => void;
 }
 
 // ============================================================================
@@ -241,5 +242,16 @@ export function useAgentRunner(
     runQuery,
     cancelExecution,
     setError,
+    injectMessage: (query: string, answer: string) => {
+      setHistory(prev => [...prev, {
+        id: uuidv4(),
+        query,
+        events: [],
+        answer,
+        status: 'complete',
+        startTime: Date.now(),
+        duration: 0
+      }]);
+    }
   };
 }

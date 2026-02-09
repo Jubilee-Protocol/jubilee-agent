@@ -24,11 +24,11 @@ config({ quiet: true });
 
 export function CLI() {
   const { exit } = useApp();
-  
+
   // Ref to hold setError - avoids TDZ issue since useModelSelection needs to call
   // setError but useAgentRunner (which provides setError) depends on useModelSelection's outputs
   const setErrorRef = useRef<((error: string | null) => void) | null>(null);
-  
+
   // Model selection state and handlers
   const {
     selectionState,
@@ -44,7 +44,7 @@ export function CLI() {
     handleApiKeySubmit,
     isInSelectionFlow,
   } = useModelSelection((errorMsg) => setErrorRef.current?.(errorMsg));
-  
+
   // Agent execution state and handlers
   const {
     history,
@@ -55,10 +55,55 @@ export function CLI() {
     cancelExecution,
     setError,
   } = useAgentRunner({ model, modelProvider: provider, maxIterations: 10 }, inMemoryChatHistoryRef);
-  
+
   // Assign setError to ref so useModelSelection's callback can access it
   setErrorRef.current = setError;
-  
+
+  // On-Chain Ears Integration (The "Ear")
+  React.useEffect(() => {
+    const initEars = async () => {
+      try {
+        const { OnChainEars } = await import('./services/onchain-ears.js');
+        const { JUBILEE_VAULTS } = await import('./config/assets.js');
+        const listener = OnChainEars.getInstance();
+
+        // Set callback to inject message
+        listener.setNotificationCallback((msg) => {
+          // Play sound? (optional)
+          injectMessage("🔔 SYSTEM NOTIFICATION", msg);
+        });
+
+        // Start Listening (using jUSDi address as proxy for treasury, or env var)
+        // Ideally we use the wallet address from TreasuryServer, but we can't access it easily here.
+        // Wait, OnChainEars.startListening() takes an address.
+
+        // Hack: Get address from Treasury Server instance if initialized
+        const { TreasuryServer } = await import('./mcp/servers/treasury/index.js');
+        const treasury = TreasuryServer.getInstance();
+        // We assume Treasury is init. If not, we can't listen.
+        // But wait, Treasury.init() is called in index.tsx.
+
+        // We need to wait for Treasury to be ready.
+        // For now, let's skip auto-start if we don't know the address.
+        // Getting address from env variable as fallback
+
+        /* 
+        // FUTURE: Get real address. For now, this requires Treasury to expose it.
+        // We will rely on user manually enabling it or future impl.
+        */
+
+      } catch (e) {
+        console.error("Failed to init Ears", e);
+      }
+    }
+    initEars();
+
+    // Cleanup
+    return () => {
+      // Stop listening? Maybe keep it running.
+    }
+  }, [injectMessage]);
+
   // Input history for up/down arrow navigation
   const {
     historyValue,
@@ -68,7 +113,7 @@ export function CLI() {
     updateAgentResponse,
     resetNavigation,
   } = useInputHistory();
-  
+
   // Handle history navigation from Input component
   const handleHistoryNavigate = useCallback((direction: 'up' | 'down') => {
     if (direction === 'up') {
@@ -77,7 +122,7 @@ export function CLI() {
       navigateDown();
     }
   }, [navigateUp, navigateDown]);
-  
+
   // Handle user input submission
   const handleSubmit = useCallback(async (query: string) => {
     // Handle exit
@@ -86,27 +131,27 @@ export function CLI() {
       exit();
       return;
     }
-    
+
     // Handle model selection command
     if (query === '/model') {
       startSelection();
       return;
     }
-    
+
     // Ignore if not idle (processing or in selection flow)
     if (isInSelectionFlow() || workingState.status !== 'idle') return;
-    
+
     // Save user message to history immediately and reset navigation
     await saveMessage(query);
     resetNavigation();
-    
+
     // Run query and save agent response when complete
     const result = await runQuery(query);
     if (result?.answer) {
       await updateAgentResponse(result.answer);
     }
   }, [exit, startSelection, isInSelectionFlow, workingState.status, runQuery, saveMessage, updateAgentResponse, resetNavigation]);
-  
+
   // Handle keyboard shortcuts
   useInput((input, key) => {
     // Escape key - cancel selection flows or running agent
@@ -120,7 +165,7 @@ export function CLI() {
         return;
       }
     }
-    
+
     // Ctrl+C - cancel or exit
     if (key.ctrl && input === 'c') {
       if (isInSelectionFlow()) {
@@ -133,10 +178,10 @@ export function CLI() {
       }
     }
   });
-  
+
   // Render selection screens
   const { appState, pendingProvider, pendingModels } = selectionState;
-  
+
   if (appState === 'provider_select') {
     return (
       <Box flexDirection="column">
@@ -144,7 +189,7 @@ export function CLI() {
       </Box>
     );
   }
-  
+
   if (appState === 'model_select' && pendingProvider) {
     return (
       <Box flexDirection="column">
@@ -157,7 +202,7 @@ export function CLI() {
       </Box>
     );
   }
-  
+
   if (appState === 'model_input' && pendingProvider) {
     return (
       <Box flexDirection="column">
@@ -169,60 +214,60 @@ export function CLI() {
       </Box>
     );
   }
-  
+
   if (appState === 'api_key_confirm' && pendingProvider) {
     return (
       <Box flexDirection="column">
-        <ApiKeyConfirm 
-          providerName={getProviderDisplayName(pendingProvider)} 
-          onConfirm={handleApiKeyConfirm} 
+        <ApiKeyConfirm
+          providerName={getProviderDisplayName(pendingProvider)}
+          onConfirm={handleApiKeyConfirm}
         />
       </Box>
     );
   }
-  
+
   if (appState === 'api_key_input' && pendingProvider) {
     const apiKeyName = getApiKeyNameForProvider(pendingProvider) || '';
     return (
       <Box flexDirection="column">
-        <ApiKeyInput 
+        <ApiKeyInput
           providerName={getProviderDisplayName(pendingProvider)}
           apiKeyName={apiKeyName}
-          onSubmit={handleApiKeySubmit} 
+          onSubmit={handleApiKeySubmit}
         />
       </Box>
     );
   }
-  
+
   // Main chat interface
   return (
     <Box flexDirection="column">
       <Intro provider={provider} model={model} />
-      
+
       {/* All history items (queries, events, answers) */}
       {history.map(item => (
         <HistoryItemView key={item.id} item={item} />
       ))}
-      
+
       {/* Error display */}
       {error && (
         <Box marginBottom={1}>
           <Text color="red">Error: {error}</Text>
         </Box>
       )}
-      
+
       {/* Working indicator - only show when processing */}
       {isProcessing && <WorkingIndicator state={workingState} />}
-      
+
       {/* Input */}
       <Box marginTop={1}>
-        <Input 
-          onSubmit={handleSubmit} 
+        <Input
+          onSubmit={handleSubmit}
           historyValue={historyValue}
           onHistoryNavigate={handleHistoryNavigate}
         />
       </Box>
-      
+
       {/* Debug Panel - set show={false} to hide */}
       <DebugPanel maxLines={8} show={true} />
     </Box>
