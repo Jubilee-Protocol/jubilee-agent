@@ -4,7 +4,7 @@
 
 **Jubilee OS** is the first **Triune AI Operating System**—a sovereign, self-hosting intelligence designed to research, code, and steward resources alongside you.
 
-> **Status**: v1.0 "Starship" (Production Ready) 🚀
+> **Status**: v1.0 "Starship" (Production Ready) 🚀 
 
 Built on a **Triune Architecture** (The Mind, The Prophet, The Will), Jubilee harmonizes advanced reasoning with execution tools (OpenClaw) and a privacy-first memory system. It is not just a chatbot; it is a **digital partner** that lives on your machine (or cloud), manages its own database, and protects your interests.
 
