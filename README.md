@@ -98,6 +98,10 @@ bun start
 ```
 1.  **Select Provider**: Choose your AI provider (OpenAI, Anthropic, etc.).
 2.  **Chat**: Enter your query (e.g., "Analyze the market").
+3.  **Verbose Mode**: Add `--verbose` for debug output:
+    ```bash
+    bun start --verbose
+    ```
 
 ## 🕊️ Hosts Mode ("The Lord of Hosts")
 
@@ -185,9 +189,30 @@ Jubilee OS now includes advanced stewardship capabilities:
 -   **The Reach (Socials)**: Toggle integrations for Twitter, Farcaster, YouTube, and Facebook via "The Synod".
 -   **The Cloud (Deploy)**: Full support for one-click deployment to Railway or Docker. See `DEPLOYMENT.md`.
 
+## 🔇 Logging & Debugging
+
+Jubilee uses a centralized logger (`src/utils/logger.ts`) that keeps the Ink CLI clean while providing full observability when needed.
+
+-   **Default**: `silent` — no terminal noise. The CLI UI stays pristine.
+-   **Environment Variable**: Set `JUBILEE_LOG_LEVEL` to control verbosity:
+    ```bash
+    JUBILEE_LOG_LEVEL=info bun start    # Startup messages, connections
+    JUBILEE_LOG_LEVEL=debug bun start   # Full verbose output
+    ```
+-   **CLI Flag**: `--verbose` or `-v` enables `debug` level:
+    ```bash
+    bun start --verbose
+    ```
+-   **Levels**: `silent` < `error` < `warn` < `info` < `debug`
+-   **All output → stderr**: Logger output is routed to `stderr` so it never interferes with the MCP stdout protocol.
+-   **Debug Panel**: The built-in in-app debug panel (`DebugPanel` component) shows live log entries via a subscribe pattern.
+
 ## 🛡️ Security Hardening
 
+-   **Centralized Logging**: All output flows through a structured logger — no raw `console.log` calls that could leak sensitive data.
+-   **AgentKit DEBUG Suppression**: During Treasury initialization, verbose debug output from `@coinbase/agentkit` (which includes API key metadata) is automatically suppressed.
 -   **Double-Confirmation**: Utilizing "The Will", sensitive actions (Shell, Transfers) are blocked unless the user explicitly types "CONFIRM", "APPROVE", or "YES".
+-   **Treasury Whitelist**: All transfer operations are validated against `TREASURY_WHITELIST` before execution.
 -   **Resilience**: The Memory system degrades gracefully if local AI services (Ollama) are offline.
 
 ## �🤝 Contribution
