@@ -198,17 +198,18 @@ export class TreasuryServer {
             // Get Tools
             const tools = await getLangChainTools(this.agentKit);
             if (this.walletProvider) {
-                tools.push(new InvestInJubileeTool(this.walletProvider));
+                // Cast needed due to AgentKit's vendored @langchain/core version mismatch
+                tools.push(new InvestInJubileeTool(this.walletProvider) as any);
             }
 
             // Filter and Wrap Tools
             this.tools = tools.map(tool => {
                 // Wrap ALL transfer/trade tools with whitelist/logic checks
                 if (tool.name.toLowerCase().includes('transfer') || tool.name.toLowerCase().includes('trade')) {
-                    return this.wrapTransferTool(tool) as any;
+                    return this.wrapTransferTool(tool as any);
                 }
                 return tool;
-            }) as any;
+            }) as any[];
 
             logger.info(`💰 Treasury Server Tool Count: ${this.tools.length}`);
 
