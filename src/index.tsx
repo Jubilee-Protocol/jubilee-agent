@@ -5,6 +5,7 @@ import { config } from 'dotenv';
 import { CLI } from './cli.js';
 
 import { McpManager } from './mcp/index.js';
+import { logger } from './utils/logger.js';
 import * as fs from 'fs';
 import * as path from 'path';
 
@@ -35,24 +36,32 @@ if (fs.existsSync(mcpConfigPath)) {
             }));
         }
     } catch (e) {
-        console.error('Failed to load mcp.json:', e);
+        logger.error('Failed to load mcp.json:', e);
     }
 }
 
-// Initialize MCP connections (we await this toensure tools are ready before CLI starts)
-// Note: In a real CLI app, we might want to show a spinner here.
+// Initialize MCP connections (await to ensure tools are ready before CLI starts)
 try {
     await McpManager.getInstance().init(mcpConfig);
 } catch (e) {
-    console.error('Failed to initialize MCP Manager:', e);
+    logger.error('Failed to initialize MCP Manager:', e);
 }
 
 // Initialize Treasury (The Almoner)
+// Suppress stdout during init to hide AgentKit's DEBUG lines that leak API key metadata
 import { TreasuryServer } from './mcp/servers/treasury/index.js';
+const originalStdoutWrite = process.stdout.write.bind(process.stdout);
+process.stdout.write = (chunk: any, ...args: any[]) => {
+    const str = typeof chunk === 'string' ? chunk : chunk.toString();
+    if (str.includes('DEBUG:')) return true; // Suppress AgentKit DEBUG lines
+    return (originalStdoutWrite as any)(chunk, ...args);
+};
 try {
     await TreasuryServer.getInstance().init();
 } catch (e) {
-    console.error('Failed to initialize Treasury Server:', e);
+    logger.error('Failed to initialize Treasury Server:', e);
+} finally {
+    process.stdout.write = originalStdoutWrite; // Restore stdout
 }
 
 // Initialize "The Voice" API
@@ -60,7 +69,6 @@ import { startVoiceServer } from './server/index.js';
 startVoiceServer(3001);
 
 // Render the CLI app and wait for it to exit
-// This keeps the process alive until the user exits
 const { waitUntilExit } = render(<CLI />);
 await waitUntilExit();
 

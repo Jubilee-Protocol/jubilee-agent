@@ -3,6 +3,7 @@ import { StructuredTool } from '@langchain/core/tools';
 import { z } from 'zod';
 import { createPublicClient, http, parseAbiItem, AbiEvent } from 'viem';
 import { mainnet, base, baseSepolia } from 'viem/chains';
+import { logger } from '../utils/logger.js';
 
 /**
  * Tool to listen for on-chain events.
@@ -33,9 +34,9 @@ export class WaitForEventTool extends StructuredTool {
             transport: http(),
         });
 
-        console.log(`👂 Listening for event on ${network}: ${contractAddress}`);
-        console.log(`   Event: ${abiItem}`);
-        console.log(`   Timeout: ${timeoutSeconds}s`);
+        logger.debug(`👂 Listening for event on ${network}: ${contractAddress}`);
+        logger.debug(`   Event: ${abiItem}`);
+        logger.debug(`   Timeout: ${timeoutSeconds}s`);
 
         try {
             const logs = await new Promise<any[]>((resolve, reject) => {

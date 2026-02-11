@@ -1,5 +1,5 @@
 import { AgentService } from './agent-service.js';
-import { logger } from './log-service.js';
+import { logService } from './log-service.js';
 
 export class DaemonService {
     private static instance: DaemonService;
@@ -19,7 +19,7 @@ export class DaemonService {
     start() {
         if (this.timer) return; // Already running
 
-        logger.addLog('SYSTEM', `🕊️ Holy Spirit Daemon started. Heartbeat: ${this.INTERVAL_MS / 60000}m`);
+        logService.addLog('SYSTEM', `🕊️ Holy Spirit Daemon started. Heartbeat: ${this.INTERVAL_MS / 60000}m`);
 
         // Run immediately on boot
         this.pulse();
@@ -34,12 +34,12 @@ export class DaemonService {
         if (this.timer) {
             clearInterval(this.timer);
             this.timer = null;
-            logger.addLog('SYSTEM', 'Daemon stopped.');
+            logService.addLog('SYSTEM', 'Daemon stopped.');
         }
     }
 
     private async pulse() {
-        logger.addLog('SYSTEM', '💓 Heartbeat: Checking OS status...');
+        logService.addLog('SYSTEM', '💓 Heartbeat: Checking OS status...');
 
         // Check if agent is busy (AgentService handles locking, but we can check specifically for "Chat vs Daemon")
         // We use a specific system prompt for the autonomous loop
@@ -57,7 +57,7 @@ You are Jubilee, the OS. This is your scheduled heartbeat.
         try {
             await AgentService.getInstance().chat(prompt);
         } catch (e) {
-            logger.addLog('ERROR', `Daemon Pulse Failed: ${e}`);
+            logService.addLog('ERROR', `Daemon Pulse Failed: ${e}`);
         }
     }
 }

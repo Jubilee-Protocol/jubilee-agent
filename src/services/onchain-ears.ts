@@ -2,6 +2,7 @@
 import { createPublicClient, http, parseAbiItem, formatUnits } from 'viem';
 import { base } from 'viem/chains';
 import { SUPPORTED_ASSETS } from '../config/assets.js';
+import { logger } from '../utils/logger.js';
 
 // Simple Event Bus for notifications
 type NotificationCallback = (msg: string) => void;
@@ -36,12 +37,12 @@ export class OnChainEars {
      */
     public async startListening(treasuryAddress: string) {
         if (this.listeners.length > 0) {
-            console.log("👂 On-Chain Ears already listening.");
+            logger.debug("👂 On-Chain Ears already listening.");
             return;
         }
 
         this.walletAddress = treasuryAddress.toLowerCase();
-        console.log(`👂 On-Chain Ears active. Listening for deposits to: ${this.walletAddress}...`);
+        logger.info(`👂 On-Chain Ears active. Listening for deposits to: ${this.walletAddress}...`);
 
         // Standard ERC20 Transfer Event
         const transferEvent = parseAbiItem('event Transfer(address indexed from, address indexed to, uint256 value)');
@@ -69,7 +70,7 @@ export class OnChainEars {
                         if (this.callback) {
                             this.callback(msg);
                         } else {
-                            console.log(`\n${msg}\n`);
+                            logger.info(`\n${msg}\n`);
                         }
                     }
                 }
@@ -81,6 +82,6 @@ export class OnChainEars {
     public stopListening() {
         this.listeners.forEach(unwatch => unwatch());
         this.listeners = [];
-        console.log("👂 On-Chain Ears stopped.");
+        logger.info("👂 On-Chain Ears stopped.");
     }
 }

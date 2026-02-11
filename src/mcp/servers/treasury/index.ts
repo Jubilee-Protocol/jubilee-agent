@@ -1,5 +1,3 @@
-// @ts-nocheck
-
 import {
     AgentKit,
     CdpEvmWalletProvider,
@@ -14,9 +12,10 @@ import { z } from "zod";
 import { StructuredToolInterface, StructuredTool } from "@langchain/core/tools";
 import * as fs from 'fs';
 import * as path from 'path';
-import { encodeFunctionData, parseUnits, formatUnits } from 'viem';
+import { encodeFunctionData, parseUnits } from 'viem';
 
-import { JUBILEE_VAULTS, SUPPORTED_ASSETS, TREASURY_CONFIG } from '../../../config/assets.js';
+import { JUBILEE_VAULTS, SUPPORTED_ASSETS } from '../../../config/assets.js';
+import { logger } from '../../../utils/logger.js';
 
 // Whitelist of allowed addresses for outgoing transfers (Mainnet)
 const WHITELISTED_ADDRESSES = process.env.TREASURY_WHITELIST
@@ -37,8 +36,8 @@ const ERC20_APPROVE_ABI = [{
 const VAULT_DEPOSIT_ABI = [{
     name: 'deposit',
     type: 'function',
-    stateMutability: 'payable', // Technically payable in some standards, usually nonpayable for ERC4626 unless WETH
-    inputs: [{ name: 'assets', type: 'uint256' }, { name: 'receiver', type: 'address' }], // ERC4626 standard
+    stateMutability: 'payable',
+    inputs: [{ name: 'assets', type: 'uint256' }, { name: 'receiver', type: 'address' }],
     outputs: [{ type: 'uint256' }]
 }] as const;
 
@@ -63,7 +62,7 @@ export class TreasuryServer {
     async init() {
         if (this.agentKit) return;
 
-        console.log(`💰 Initializing Treasury Server on ${this.networkId}...`);
+        logger.info(`💰 Initializing Treasury Server on ${this.networkId}...`);
 
         try {
             let apiKeyName = process.env.CDP_API_KEY_NAME || process.env.CDP_API_KEY_ID || "";
@@ -84,26 +83,23 @@ export class TreasuryServer {
             if (fs.existsSync(WALLET_DATA_FILE)) {
                 try {
                     walletDataStr = fs.readFileSync(WALLET_DATA_FILE, 'utf8');
-                    console.log("📂 Loaded existing wallet data.");
+                    logger.info("📂 Loaded existing wallet data.");
                 } catch (error) {
-                    console.error("Failed to read wallet data:", error);
+                    logger.error("Failed to read wallet data:", error);
                 }
             }
 
-            const config: any = {
+            const config: Record<string, unknown> = {
                 apiKeyId: apiKeyName,
                 apiKeySecret: apiKeyPrivateKey,
                 networkId: this.networkId,
             };
 
-            // If we have persisted data, inject it.
-            // Note: CdpWalletProviderConfig structure varies by version.
-            // We'll try to pass it as 'cdpWalletData' which is standard in AgentKit docs.
             if (walletDataStr) {
                 config.cdpWalletData = walletDataStr;
             }
 
-            this.walletProvider = await CdpEvmWalletProvider.configureWithWallet(config);
+            this.walletProvider = await CdpEvmWalletProvider.configureWithWallet(config as any);
 
             // Action Providers
             const actionProviders = [
@@ -122,16 +118,15 @@ export class TreasuryServer {
             // Persistence: Save Wallet Data (if new)
             if (!walletDataStr && this.walletProvider) {
                 try {
-                    const data = await this.walletProvider.exportWallet();
-                    // Ensure data dir exists
+                    const data = await (this.walletProvider as any).exportWallet();
                     const dataDir = path.dirname(WALLET_DATA_FILE);
                     if (!fs.existsSync(dataDir)) {
                         fs.mkdirSync(dataDir, { recursive: true });
                     }
                     fs.writeFileSync(WALLET_DATA_FILE, JSON.stringify(data));
-                    console.log("💾 Wallet data saved to disk.");
+                    logger.info("💾 Wallet data saved to disk.");
                 } catch (ex) {
-                    console.warn("⚠️ Failed to persist wallet data (Export might not be supported on this provider type):", ex);
+                    logger.warn("⚠️ Failed to persist wallet data (Export might not be supported on this provider type):", ex);
                 }
             }
 
@@ -166,7 +161,7 @@ export class TreasuryServer {
                         const walletAddress = await this.walletProvider.getAddress();
 
                         // 1. Approve
-                        console.log(`📝 Approving ${arg.vault} to spend ${arg.amount} ${arg.asset}...`);
+                        logger.info(`📝 Approving ${arg.vault} to spend ${arg.amount} ${arg.asset}...`);
                         const approveData = encodeFunctionData({
                             abi: ERC20_APPROVE_ABI,
                             functionName: 'approve',
@@ -174,21 +169,21 @@ export class TreasuryServer {
                         });
 
                         const approveTx = await this.walletProvider.sendTransaction({
-                            to: assetInfo.address,
+                            to: assetInfo.address as `0x${string}`,
                             data: approveData
                         });
-                        console.log(`✅ Approved. TX: ${approveTx}`);
+                        logger.info(`✅ Approved. TX: ${approveTx}`);
 
                         // 2. Deposit
-                        console.log(`🏦 Depositing ${arg.amount} ${arg.asset} into ${arg.vault}...`);
+                        logger.info(`🏦 Depositing ${arg.amount} ${arg.asset} into ${arg.vault}...`);
                         const depositData = encodeFunctionData({
                             abi: VAULT_DEPOSIT_ABI,
                             functionName: 'deposit',
-                            args: [amountBigInt, walletAddress]
+                            args: [amountBigInt, walletAddress as `0x${string}`]
                         });
 
                         const depositTx = await this.walletProvider.sendTransaction({
-                            to: vaultAddr,
+                            to: vaultAddr as `0x${string}`,
                             data: depositData
                         });
 
@@ -215,16 +210,15 @@ export class TreasuryServer {
                 return tool;
             }) as any;
 
-            console.log(`💰 Treasury Server Tool Count: ${this.tools.length}`);
+            logger.info(`💰 Treasury Server Tool Count: ${this.tools.length}`);
 
         } catch (error) {
-            console.error("❌ Failed to initialize Treasury Server:", error);
+            logger.error("❌ Failed to initialize Treasury Server:", error);
             // Don't throw, just degrade functionality
         }
     }
 
     private wrapTransferTool(originalTool: StructuredToolInterface): StructuredToolInterface {
-        // Broadly cast to avoid complex LangChain type nesting issues
         const toolAny = originalTool as any;
         const originalCall = toolAny.call.bind(toolAny);
 
@@ -237,7 +231,9 @@ export class TreasuryServer {
                 try {
                     const parsed = JSON.parse(arg);
                     toAddress = parsed.to || parsed.destination || parsed.recipient || parsed.address || '';
-                } catch { }
+                } catch {
+                    logger.debug(`Could not parse transfer arg as JSON: ${arg}`);
+                }
             }
 
             toAddress = toAddress.toLowerCase();
@@ -248,11 +244,11 @@ export class TreasuryServer {
                 : [];
 
             if (WHITELIST.length > 0 && !WHITELIST.includes(toAddress)) {
-                console.warn(`🚨 SECURITY ALERT: Blocked transfer attempt to non-whitelisted address: ${toAddress}`);
+                logger.warn(`🚨 SECURITY ALERT: Blocked transfer attempt to non-whitelisted address: ${toAddress}`);
                 return `⛔ SECURITY BLOCK: The address '${toAddress}' is NOT in the Treasury Whitelist. Transfer aborted.`;
             }
 
-            console.log(`👮‍♂️ Whitelist Check Passed for: ${toAddress}`);
+            logger.debug(`👮‍♂️ Whitelist Check Passed for: ${toAddress}`);
 
             if (config) {
                 return (originalCall as any)(arg, config);
@@ -268,7 +264,7 @@ export class TreasuryServer {
             try {
                 return await this.walletProvider.getAddress();
             } catch (e) {
-                console.error("Failed to get wallet address from provider", e);
+                logger.error("Failed to get wallet address from provider", e);
                 return null;
             }
         }

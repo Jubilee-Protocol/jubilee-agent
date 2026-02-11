@@ -1,6 +1,7 @@
 import { db } from '../db/index.js';
 import { logs } from '../db/schema.js';
 import { desc } from 'drizzle-orm';
+import { logger as cliLogger } from '../utils/logger.js';
 
 export interface LogEntry {
     id: string; // We'll map DB id to string if needed, or stick to number? DB is number. Let's cast or adjust interface.
@@ -36,7 +37,7 @@ class LogService {
         this.buffer.unshift({ id: tempId, type, message, timestamp });
         if (this.buffer.length > this.MAX_BUFFER) this.buffer.pop();
 
-        console.log(`[${type}] ${message}`);
+        cliLogger.debug(`[${type}] ${message}`);
 
         // 2. Persist to DB (Fire and Forget but log error)
         try {
@@ -47,7 +48,7 @@ class LogService {
                 timestamp: new Date(timestamp)
             });
         } catch (e) {
-            console.error('Failed to persist log:', e);
+            cliLogger.error('Failed to persist log:', e);
         }
     }
 
@@ -63,10 +64,10 @@ class LogService {
                 timestamp: r.timestamp.getTime()
             }));
         } catch (e) {
-            console.warn('DB Fetch failed, returning buffer:', e);
+            cliLogger.warn('DB Fetch failed, returning buffer:', e);
             return this.buffer;
         }
     }
 }
 
-export const logger = LogService.getInstance();
+export const logService = LogService.getInstance();

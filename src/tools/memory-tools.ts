@@ -1,6 +1,7 @@
 
 import { StructuredTool } from '@langchain/core/tools';
 import { z } from 'zod';
+import { logger as cliLogger } from '../utils/logger.js';
 
 // We do NOT import MemoryManager statically here to avoid native module crash on startup
 // import { MemoryManager } from '../memory/index.js';
@@ -33,7 +34,7 @@ Reply "APPROVE" or "REJECT: [Reason]".`;
                 ['user', 'Validate this memory.']
             ]);
             const verdict = check.content.toString().trim();
-            console.log(`🛡️ Prophet Verdict on memory: "${verdict}"`);
+            cliLogger.info(`🛡️ Prophet Verdict on memory: "${verdict}"`);
 
             if (!verdict.startsWith('APPROVE')) {
                 return `⛔ MEMORY BLOCKED BY THE PROPHET: ${verdict}`;
@@ -82,7 +83,6 @@ export class RecallMemoriesTool extends StructuredTool {
 
             if (results.length === 0) return 'No relevant memories found.';
 
-            // @ts-ignore
             return results.map((r: any) => `- "${r.text}" (Relevance: ${r.score})`).join('\n');
         } catch (e: any) {
             if (e.code === 'MODULE_NOT_FOUND' || e.message?.includes('Cannot find module')) {

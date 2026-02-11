@@ -2,6 +2,7 @@
 import * as fs from 'fs';
 import * as path from 'path';
 import * as os from 'os';
+import { logger } from '../utils/logger.js';
 
 export interface JubileeConfig {
     modes: {
@@ -47,7 +48,7 @@ export class ConfigManager {
                 const raw = fs.readFileSync(this.configPath, 'utf8');
                 return { ...DEFAULT_CONFIG, ...JSON.parse(raw) };
             } catch (e) {
-                console.error("Failed to load config, using defaults:", e);
+                logger.error("Failed to load config, using defaults:", e);
                 return DEFAULT_CONFIG;
             }
         }
@@ -61,7 +62,7 @@ export class ConfigManager {
     public setMode(mode: 'treasury' | 'hosts', enabled: boolean) {
         this.config.modes[mode] = enabled;
         this.saveConfig();
-        console.log(`✅ Config Updated: ${mode} mode is now ${enabled ? 'ENABLED' : 'DISABLED'}.`);
+        logger.info(`✅ Config Updated: ${mode} mode is now ${enabled ? 'ENABLED' : 'DISABLED'}.`);
     }
 
     public setNetwork(network: 'base-mainnet' | 'base-sepolia') {

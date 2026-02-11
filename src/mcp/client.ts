@@ -2,11 +2,11 @@
 import { Client } from '@modelcontextprotocol/sdk/client/index.js';
 import { StdioClientTransport } from '@modelcontextprotocol/sdk/client/stdio.js';
 import {
-    CallToolRequestSchema,
     type Tool,
     ListToolsResultSchema,
     CallToolResultSchema
 } from '@modelcontextprotocol/sdk/types.js';
+import { logger } from '../utils/logger.js';
 
 /**
  * A client for connecting to an MCP server.
@@ -26,12 +26,11 @@ export class McpClient {
             args
         });
 
-        // Debug
-        // @ts-ignore
-        if (this.transport.stderr) {
-            // @ts-ignore
-            this.transport.stderr.on('data', (data) => {
-                console.error(`[MCP STDERR: ${serverName}] ${data}`);
+        // Route MCP server stderr through logger instead of raw console
+        const transportAny = this.transport as any;
+        if (transportAny.stderr) {
+            transportAny.stderr.on('data', (data: Buffer) => {
+                logger.debug(`[MCP STDERR: ${serverName}] ${data}`);
             });
         }
 
@@ -55,9 +54,9 @@ export class McpClient {
         try {
             await this.client.connect(this.transport);
             this.connected = true;
-            console.log(`🔌 Connected to MCP server: ${this.serverName}`);
+            logger.info(`🔌 Connected to MCP server: ${this.serverName}`);
         } catch (error) {
-            console.error(`❌ Failed to connect to MCP server ${this.serverName}:`, error);
+            logger.error(`❌ Failed to connect to MCP server ${this.serverName}:`, error);
             throw error;
         }
     }
@@ -68,7 +67,6 @@ export class McpClient {
     async listTools(): Promise<Tool[]> {
         if (!this.connected) await this.connect();
 
-        // The SDK might require explicit request object if schema inference fails
         const result = await this.client.request(
             { method: 'tools/list' },
             ListToolsResultSchema
@@ -82,8 +80,6 @@ export class McpClient {
     async callTool(name: string, args: Record<string, unknown>): Promise<any> {
         if (!this.connected) await this.connect();
 
-        // Ensure args are valid JSON-serializable
-        // Some tools might return complex objects, we trust the SDK handles request serialization
         const result = await this.client.request(
             {
                 method: 'tools/call',
@@ -108,3 +104,4 @@ export class McpClient {
         }
     }
 }
+

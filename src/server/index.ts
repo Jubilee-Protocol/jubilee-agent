@@ -3,7 +3,8 @@ import { Hono } from 'hono';
 import { serve } from '@hono/node-server';
 import { cors } from 'hono/cors';
 import { streamText } from 'hono/streaming';
-import { logger } from '../services/log-service.js';
+import { logService } from '../services/log-service.js';
+import { logger as cliLogger } from '../utils/logger.js';
 import { TreasuryServer } from '../mcp/servers/treasury/index.js';
 import { JUBILEE_VAULTS } from '../config/assets.js';
 import { AgentService } from '../services/agent-service.js';
@@ -36,7 +37,7 @@ app.use('/*', async (c, next) => {
 
     // If no tokens set, warn and allow (Dev Mode)
     if (!adminToken && !readToken) {
-        console.warn("⚠️ SECURITY WARNING: No tokens set. API is open.");
+        cliLogger.warn("⚠️ SECURITY WARNING: No tokens set. API is open.");
         await next();
         return;
     }
@@ -73,7 +74,7 @@ app.get('/health', (c) => {
 // Epistle Endpoint (Logs) - PROTECTED
 app.get('/epistle', async (c) => {
     return c.json({
-        logs: await logger.getLogs()
+        logs: await logService.getLogs()
     });
 });
 
@@ -187,9 +188,9 @@ export const startVoiceServer = (port: number) => {
         fetch: app.fetch,
         port
     }, (info) => {
-        console.log(`\n🎙️  The Voice is speaking on port ${info.port}`);
-        console.log(`🔑  Admin Token: ${process.env.JUBILEE_ADMIN_TOKEN ? '******' : 'NOT SET'}`);
-        console.log(`📖  Read Token: ${process.env.JUBILEE_READ_TOKEN ? '******' : 'NOT SET'}`);
+        cliLogger.info(`\n🎙️  The Voice is speaking on port ${info.port}`);
+        cliLogger.info(`🔑  Admin Token: ${process.env.JUBILEE_ADMIN_TOKEN ? '******' : 'NOT SET'}`);
+        cliLogger.info(`📖  Read Token: ${process.env.JUBILEE_READ_TOKEN ? '******' : 'NOT SET'}`);
 
         // Start the Autonomous Daemon
         DaemonService.getInstance().start();

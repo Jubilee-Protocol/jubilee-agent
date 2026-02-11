@@ -2,6 +2,7 @@
 import { McpClient } from './client.js';
 import { McpTool } from './tool-wrapper.js';
 import type { StructuredToolInterface } from '@langchain/core/tools';
+import { logger } from '../utils/logger.js';
 
 export interface McpServerConfig {
     id: string;
@@ -34,7 +35,7 @@ export class McpManager {
     async init(configs: McpServerConfig[]) {
         if (this.initialized) return;
 
-        console.log('🔌 Initializing MCP Manager...');
+        logger.info('🔌 Initializing MCP Manager...');
 
         for (const config of configs) {
             if (config.disabled) continue;
@@ -44,7 +45,7 @@ export class McpManager {
                 await client.connect();
 
                 const tools = await client.listTools();
-                console.log(`   - Server '${config.id}': Discovered ${tools.length} tools.`);
+                logger.info(`   - Server '${config.id}': Discovered ${tools.length} tools.`);
 
                 // Wrap tools
                 const wrappedTools = tools.map(t => new McpTool(client, t));
@@ -53,17 +54,16 @@ export class McpManager {
                 this.tools.push(...wrappedTools);
 
             } catch (error: any) {
-                console.error(`   ! Failed to connect to MCP server '${config.id}':`);
-                console.error(`     Message: ${error.message}`);
-                console.error(`     Stack: ${error.stack}`);
+                logger.error(`Failed to connect to MCP server '${config.id}': ${error.message}`);
+                logger.debug(`Stack: ${error.stack}`);
                 if (error.issues) {
-                    console.error(`     Zod Issues: ${JSON.stringify(error.issues, null, 2)}`);
+                    logger.debug(`Zod Issues: ${JSON.stringify(error.issues, null, 2)}`);
                 }
             }
         }
 
         this.initialized = true;
-        console.log(`✅ MCP Initialization complete. Total tools: ${this.tools.length}`);
+        logger.info(`✅ MCP Initialization complete. Total tools: ${this.tools.length}`);
     }
 
     /**
@@ -85,3 +85,4 @@ export class McpManager {
         this.initialized = false;
     }
 }
+

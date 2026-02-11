@@ -5,6 +5,7 @@ import { colors } from '../theme.js';
 import type { LogLevel } from '../utils/logger.js';
 
 const levelColors: Record<LogLevel, string> = {
+  silent: colors.mutedDark,
   debug: colors.mutedDark,
   info: colors.info,
   warn: colors.warning,
@@ -32,15 +33,12 @@ export function DebugPanel({ maxLines = 10, show = true }: DebugPanelProps) {
       marginTop={1}
     >
       <Text color={colors.mutedDark} dimColor>─ Debug ─</Text>
-      {displayLogs.map(entry => (
-        <Box key={entry.id}>
+      {displayLogs.map((entry, i) => (
+        <Box key={`${entry.timestamp}-${i}`}>
           <Text color={levelColors[entry.level]}>
             [{entry.level.toUpperCase().padEnd(5)}]
           </Text>
           <Text> {entry.message}</Text>
-          {entry.data !== undefined && (
-            <Text color={colors.mutedDark}> {JSON.stringify(entry.data)}</Text>
-          )}
         </Box>
       ))}
     </Box>

@@ -6,6 +6,8 @@ const OpenClawSendMessageSchema = z.object({
     session_id: z.string().optional().describe("Optional session ID to target a specific OpenClaw session."),
 });
 
+import { logger } from '../../utils/logger.js';
+
 export const openClawSendMessage = new DynamicStructuredTool({
     name: 'openclaw_send_message',
     description: `Sends a message or command to a local OpenClaw agent instance. 
@@ -17,7 +19,7 @@ This tool assumes OpenClaw is running locally and listening for 'sessions_send' 
         // For now, since we don't have the exact port/auth for the user's local OpenClaw,
         // we will simulate the "Handover" and return a success message.
 
-        console.log(`[OpenClaw Integration] Sending message: "${input.message}"`);
+        logger.debug(`[OpenClaw Integration] Sending message: "${input.message}"`);
 
         // Simulate a successful dispatch
         return JSON.stringify({

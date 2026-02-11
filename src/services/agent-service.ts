@@ -1,6 +1,6 @@
 import { TriuneAgent } from '../agent/triune-agent.js';
 import { InMemoryChatHistory } from '../utils/in-memory-chat-history.js';
-import { logger } from './log-service.js';
+import { logService } from './log-service.js';
 import { DoneEvent } from '../agent/types.js';
 
 export class AgentService {
@@ -26,7 +26,7 @@ export class AgentService {
         }
 
         this.isRunning = true;
-        logger.addLog('SYSTEM', `Received command: ${query}`);
+        logService.addLog('SYSTEM', `Received command: ${query}`);
 
         try {
             // Load Dynamic Settings
@@ -46,18 +46,18 @@ export class AgentService {
                 // 1. Log to internal system (so Epistle works)
                 switch (event.type) {
                     case 'thinking':
-                        logger.addLog('MIND', event.message);
+                        logService.addLog('MIND', event.message);
                         break;
                     case 'tool_start':
-                        logger.addLog('WILL', `Executing ${event.tool}...`);
+                        logService.addLog('WILL', `Executing ${event.tool}...`);
                         break;
                     case 'tool_error':
-                        logger.addLog('ERROR', `Tool Error: ${event.error}`);
+                        logService.addLog('ERROR', `Tool Error: ${event.error}`);
                         break;
                     case 'done':
                         const done = event as DoneEvent;
                         finalAnswer = done.answer;
-                        logger.addLog('PROPHET', `Task Complete: ${finalAnswer.slice(0, 50)}...`);
+                        logService.addLog('PROPHET', `Task Complete: ${finalAnswer.slice(0, 50)}...`);
 
                         // Save to history
                         await this.history.saveUserQuery(query);
@@ -72,10 +72,10 @@ export class AgentService {
         } catch (error: any) {
             if (error.message && error.message.includes('API_KEY')) {
                 const msg = "My voice is faint. Please visit The Synod to grant me an API Key for the selected model.";
-                logger.addLog('SYSTEM', msg);
+                logService.addLog('SYSTEM', msg);
                 yield { type: 'error', error: msg };
             } else {
-                logger.addLog('ERROR', `Agent Crash: ${error.message}`);
+                logService.addLog('ERROR', `Agent Crash: ${error.message}`);
                 yield { type: 'error', error: error.message };
             }
         } finally {

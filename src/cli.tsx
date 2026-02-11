@@ -6,6 +6,7 @@
 import React, { useCallback, useRef } from 'react';
 import { Box, Text, useApp, useInput } from 'ink';
 import { config } from 'dotenv';
+import { logger } from './utils/logger.js';
 
 import { Input } from './components/Input.js';
 import { Intro } from './components/Intro.js';
@@ -94,7 +95,7 @@ export function CLI() {
         */
 
       } catch (e) {
-        console.error("Failed to init Ears", e);
+        logger.error("Failed to init Ears", e);
       }
     }
     initEars();
@@ -128,7 +129,7 @@ export function CLI() {
   const handleSubmit = useCallback(async (query: string) => {
     // Handle exit
     if (query.toLowerCase() === 'exit' || query.toLowerCase() === 'quit') {
-      console.log('Goodbye!');
+      process.stderr.write('Goodbye!\n');
       exit();
       return;
     }
@@ -174,7 +175,7 @@ export function CLI() {
       } else if (isProcessing) {
         cancelExecution();
       } else {
-        console.log('\nGoodbye!');
+        process.stderr.write('\nGoodbye!\n');
         exit();
       }
     }

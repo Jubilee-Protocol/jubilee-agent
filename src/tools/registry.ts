@@ -3,21 +3,6 @@ import { BibleTool } from './bible.js';
 import { CommunicationTool } from './communication.js';
 import { IngestCodebaseTool, SearchCodebaseTool } from './codebase-tools.js';
 import { WaitForEventTool } from './onchain-tools.js';
-
-// ... imports
-
-
-
-// ...
-
-// In getToolsForRole
-
-// The Mind: Research and Analysis only.
-const mindTools = ['financial_search', 'financial_metrics', 'read_filings', 'browser', 'web_search', 'skill', 'remember_fact', 'recall_memories', 'bible_lookup'];
-
-// The Prophet: High-level trends and strategy.
-const prophetTools = ['financial_search', 'financial_metrics', 'web_search', 'browser', 'skill', 'remember_fact', 'recall_memories', 'bible_lookup', 'draft_email'];
-
 import { createFinancialSearch, createFinancialMetrics, createReadFilings } from './finance/index.js';
 import { exaSearch, tavilySearch } from './search/index.js';
 import { browserTool } from './browser/index.js';
@@ -27,6 +12,10 @@ import { discoverSkills } from '../skills/index.js';
 import { McpManager } from '../mcp/index.js';
 import { RememberFactTool, RecallMemoriesTool } from './memory-tools.js';
 import { DispatchAngelTool } from './angel-tool.js';
+import { ConfigManager } from '../config/settings.js';
+import { TreasuryServer } from '../mcp/servers/treasury/index.js';
+import { logger } from '../utils/logger.js';
+
 
 
 
@@ -144,18 +133,11 @@ export function getToolRegistry(model: string): RegisteredTool[] {
   }
 
   // Include Treasury Tools (The Almoner)
-  // Check Config first
-  const { ConfigManager } = require('../config/settings.js');
   const config = ConfigManager.getInstance().getConfig();
 
-  // ENABLED for Mainnet Launch
-  if (config.modes.treasury || true) { // Forced ON for now or use config
-    // Note: We need to import dynamically to avoid circular deps if any
+  if (config.modes.treasury) {
     try {
-      const { TreasuryServer } = require('../mcp/servers/treasury/index.js');
-      // Initialize async in background if not already
-      TreasuryServer.getInstance().init();
-
+      // Treasury is initialized in index.tsx — just get tools here, no double init
       const treasuryTools = TreasuryServer.getInstance().getTools();
       for (const t of treasuryTools) {
         tools.push({
@@ -165,7 +147,7 @@ export function getToolRegistry(model: string): RegisteredTool[] {
         });
       }
     } catch (e) {
-      console.warn("Failed to load Treasury Tools:", e);
+      logger.warn("Failed to load Treasury Tools:", e);
     }
   }
 

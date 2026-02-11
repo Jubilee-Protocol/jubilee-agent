@@ -74,7 +74,8 @@ export class McpTool extends StructuredTool {
 
             return JSON.stringify(result);
         } catch (error) {
-            console.error(`Error callsing MCP tool ${this.name}:`, error);
+            const { logger } = await import('../utils/logger.js');
+            logger.error(`Error calling MCP tool ${this.name}:`, error);
             return `Error: ${error instanceof Error ? error.message : String(error)}`;
         }
     }

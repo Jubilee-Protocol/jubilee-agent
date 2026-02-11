@@ -1,67 +1,120 @@
-type LogLevel = 'debug' | 'info' | 'warn' | 'error';
+/**
+ * Centralized Logger for Jubilee OS
+ * 
+ * Replaces raw console.log/error/warn calls that pollute the Ink terminal UI.
+ * Respects JUBILEE_LOG_LEVEL env var or --verbose CLI flag.
+ * 
+ * Levels: silent < error < warn < info < debug
+ */
 
-interface LogEntry {
-  id: string;
+export type LogLevel = 'silent' | 'error' | 'warn' | 'info' | 'debug';
+
+export interface LogEntry {
   level: LogLevel;
   message: string;
-  timestamp: Date;
-  data?: unknown;
+  timestamp: number;
 }
 
-type LogSubscriber = (logs: LogEntry[]) => void;
+const LEVEL_ORDER: Record<LogLevel, number> = {
+  silent: 0,
+  error: 1,
+  warn: 2,
+  info: 3,
+  debug: 4,
+};
 
-class DebugLogger {
-  private logs: LogEntry[] = [];
-  private subscribers: Set<LogSubscriber> = new Set();
-  private maxLogs = 50;
+type Subscriber = (entries: LogEntry[]) => void;
 
-  private emit() {
-    this.subscribers.forEach(fn => fn([...this.logs]));
-  }
+class Logger {
+  private level: LogLevel;
+  private buffer: LogEntry[] = [];
+  private readonly MAX_BUFFER = 100;
+  private subscribers: Set<Subscriber> = new Set();
 
-  private add(level: LogLevel, message: string, data?: unknown) {
-    const entry: LogEntry = {
-      id: `${Date.now()}-${Math.random().toString(36).slice(2, 9)}`,
-      level,
-      message,
-      timestamp: new Date(),
-      data,
-    };
-    this.logs.push(entry);
-    if (this.logs.length > this.maxLogs) {
-      this.logs = this.logs.slice(-this.maxLogs);
+  constructor() {
+    // Default to 'silent' — the Ink CLI should be clean.
+    // Use JUBILEE_LOG_LEVEL=info or --verbose to see output.
+    const envLevel = process.env.JUBILEE_LOG_LEVEL?.toLowerCase() as LogLevel | undefined;
+    const hasVerbose = process.argv.includes('--verbose') || process.argv.includes('-v');
+
+    if (hasVerbose) {
+      this.level = 'debug';
+    } else if (envLevel && LEVEL_ORDER[envLevel] !== undefined) {
+      this.level = envLevel;
+    } else {
+      this.level = 'silent';
     }
-    this.emit();
   }
 
-  debug(message: string, data?: unknown) {
-    this.add('debug', message, data);
+  private shouldLog(level: LogLevel): boolean {
+    return LEVEL_ORDER[level] <= LEVEL_ORDER[this.level];
   }
 
-  info(message: string, data?: unknown) {
-    this.add('info', message, data);
+  private addEntry(level: LogLevel, message: string): void {
+    const entry: LogEntry = { level, message, timestamp: Date.now() };
+    this.buffer.push(entry);
+    if (this.buffer.length > this.MAX_BUFFER) {
+      this.buffer.shift();
+    }
+    // Notify subscribers (for debug panel UI)
+    for (const sub of this.subscribers) {
+      sub([...this.buffer]);
+    }
   }
 
-  warn(message: string, data?: unknown) {
-    this.add('warn', message, data);
+  /** Subscribe to log entries (for UI components like DebugPanel) */
+  subscribe(cb: Subscriber): () => void {
+    this.subscribers.add(cb);
+    // Immediately send current buffer
+    cb([...this.buffer]);
+    return () => {
+      this.subscribers.delete(cb);
+    };
   }
 
-  error(message: string, data?: unknown) {
-    this.add('error', message, data);
+  /** Critical errors that indicate broken functionality */
+  error(message: string, ...args: unknown[]): void {
+    this.addEntry('error', message);
+    if (this.shouldLog('error')) {
+      console.error(`[ERROR] ${message}`, ...args);
+    }
   }
 
-  subscribe(fn: LogSubscriber): () => void {
-    this.subscribers.add(fn);
-    fn([...this.logs]); // Send current logs immediately
-    return () => this.subscribers.delete(fn);
+  /** Warnings — degraded functionality, security alerts */
+  warn(message: string, ...args: unknown[]): void {
+    this.addEntry('warn', message);
+    if (this.shouldLog('warn')) {
+      console.error(`[WARN] ${message}`, ...args);
+    }
   }
 
-  clear() {
-    this.logs = [];
-    this.emit();
+  /** Informational — startup, connections, tool counts */
+  info(message: string, ...args: unknown[]): void {
+    this.addEntry('info', message);
+    if (this.shouldLog('info')) {
+      console.error(`[INFO] ${message}`, ...args);
+    }
+  }
+
+  /** Debug — verbose details, arguments, step-by-step */
+  debug(message: string, ...args: unknown[]): void {
+    this.addEntry('debug', message);
+    if (this.shouldLog('debug')) {
+      console.error(`[DEBUG] ${message}`, ...args);
+    }
+  }
+
+  /** Get the current log level */
+  getLevel(): LogLevel {
+    return this.level;
+  }
+
+  /** Temporarily set log level (e.g. suppress during init) */
+  setLevel(level: LogLevel): void {
+    this.level = level;
   }
 }
 
-// Singleton instance
-export const logger = new DebugLogger();
-export type { LogEntry, LogLevel };
+/** Singleton logger instance */
+export const logger = new Logger();
+

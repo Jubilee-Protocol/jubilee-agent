@@ -1,22 +1,43 @@
 import { OpenAIEmbeddings } from '@langchain/openai';
+import { OllamaEmbeddings } from '@langchain/ollama';
+import { GoogleGenerativeAIEmbeddings } from "@langchain/google-genai";
 import { db } from '../db/index.js';
 import { memories } from '../db/schema.js';
 import { cosineDistance, desc, gt, sql, eq } from 'drizzle-orm';
-import { v4 as uuidv4 } from 'uuid';
+import { Embeddings } from '@langchain/core/embeddings';
+import { logger } from '../utils/logger.js';
 
 export class MemoryManager {
     private static instance: MemoryManager;
-    private embeddings: OpenAIEmbeddings;
+    private embeddings: Embeddings;
     private isOnline = true;
 
     private constructor() {
-        this.embeddings = new OpenAIEmbeddings({
-            modelName: 'text-embedding-3-small',
-        });
+        const provider = process.env.EMBEDDING_PROVIDER || 'openai';
+
+        if (provider === 'ollama') {
+            logger.info("🧠 MemoryManager: Using Ollama for embeddings");
+            this.embeddings = new OllamaEmbeddings({
+                model: process.env.OLLAMA_EMBEDDING_MODEL || 'nomic-embed-text',
+                baseUrl: process.env.OLLAMA_BASE_URL || 'http://localhost:11434',
+            });
+        } else if (provider === 'google') {
+            logger.info("🧠 MemoryManager: Using Google for embeddings");
+            this.embeddings = new GoogleGenerativeAIEmbeddings({
+                modelName: "embedding-001", // or text-embedding-004
+                apiKey: process.env.GOOGLE_API_KEY,
+            });
+        } else {
+            logger.info("🧠 MemoryManager: Using OpenAI for embeddings");
+            this.embeddings = new OpenAIEmbeddings({
+                modelName: process.env.OPENAI_EMBEDDING_MODEL || 'text-embedding-3-small',
+                openAIApiKey: process.env.OPENAI_API_KEY,
+            });
+        }
     }
 
     // For testing/mocking
-    public setEmbeddings(embeddings: any) {
+    public setEmbeddings(embeddings: Embeddings) {
         this.embeddings = embeddings;
     }
 
@@ -30,12 +51,12 @@ export class MemoryManager {
     async init() {
         // DB connection is handled by src/db/index.ts singleton.
         // We can just verify it works here if needed.
-        console.log('🧠 MemoryManager (Postgres): Initialized.');
+        logger.info('🧠 MemoryManager (Postgres): Initialized.');
     }
 
     async remember(text: string, metadata: Record<string, any> = {}): Promise<string> {
         try {
-            console.log(`🧠 Memorizing: "${text.slice(0, 30)}..."`);
+            logger.debug(`🧠 Memorizing: "${text.slice(0, 30)}..."`);
             const embedding = await this.embeddings.embedQuery(text);
 
             const result = await db.insert(memories).values({
@@ -46,7 +67,7 @@ export class MemoryManager {
 
             return result[0].id.toString();
         } catch (e) {
-            console.error('Failed to remember:', e);
+            logger.error('Failed to remember:', e);
             return 'error';
         }
     }
@@ -69,7 +90,7 @@ export class MemoryManager {
                 .limit(limit);
 
             if (results.length > 0) {
-                console.log(`🧠 Recalled ${results.length} memories.`);
+                logger.debug(`🧠 Recalled ${results.length} memories.`);
             }
 
             return results.map(r => ({
@@ -79,18 +100,18 @@ export class MemoryManager {
                 metadata: { source: r.source }
             }));
         } catch (e) {
-            console.error('Failed to recall:', e);
+            logger.error('Failed to recall:', e);
             return [];
         }
     }
 
     async forget(id: number): Promise<boolean> {
         try {
-            console.log(`🧠 Forgetting memory ID: ${id}`);
+            logger.debug(`🧠 Forgetting memory ID: ${id}`);
             await db.delete(memories).where(eq(memories.id, id));
             return true;
         } catch (e) {
-            console.error('Failed to forget:', e);
+            logger.error('Failed to forget:', e);
             return false;
         }
     }

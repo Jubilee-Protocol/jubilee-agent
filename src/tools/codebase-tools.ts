@@ -5,6 +5,7 @@ import * as fs from 'fs';
 import * as path from 'path';
 import { MemoryManager } from "../memory/index.js";
 import { v4 as uuidv4 } from 'uuid';
+import { logger } from '../utils/logger.js';
 
 /**
  * Scan directory recursively and return list of file paths.
@@ -43,7 +44,7 @@ export class IngestCodebaseTool extends StructuredTool {
         // Target specific directories for relevance
         const targetDirs = ['src', 'scripts', 'programs', 'contracts', 'docs'];
 
-        console.log("📚 Starting Codebase Ingestion...");
+        logger.info("📚 Starting Codebase Ingestion...");
         const memory = MemoryManager.getInstance();
         await memory.init();
 
@@ -56,7 +57,7 @@ export class IngestCodebaseTool extends StructuredTool {
             files = files.concat(scanDirectory(path.join(rootDir, dir)));
         }
 
-        console.log(`📚 Found ${files.length} files to process.`);
+        logger.info(`📚 Found ${files.length} files to process.`);
 
         let count = 0;
         for (const file of files) {
@@ -86,10 +87,10 @@ export class IngestCodebaseTool extends StructuredTool {
                 await memory.remember(textToEmbed, { ...metadata, tags: ['code_context'] });
                 count++;
 
-                if (count % 10 === 0) console.log(`   Indexed ${count}/${files.length} files...`);
+                if (count % 10 === 0) logger.debug(`   Indexed ${count}/${files.length} files...`);
 
             } catch (e) {
-                console.warn(`   Skipped ${file}: ${e}`);
+                logger.warn(`   Skipped ${file}: ${e}`);
             }
         }
 

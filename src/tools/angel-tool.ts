@@ -6,6 +6,7 @@ import type { AgentConfig } from '../agent/types.js';
 import { getChatModel } from '../model/llm.js';
 import { getToolsForRole, getToolRegistry } from './registry.js';
 import { InMemoryChatHistory } from '../utils/in-memory-chat-history.js';
+import { logger } from '../utils/logger.js';
 
 /**
  * DispatchAngelTool
@@ -24,7 +25,7 @@ export class DispatchAngelTool extends StructuredTool {
     });
 
     async _call(arg: { name: string, mission: string, capabilities: string[], skill_focus?: string, iterations: number }): Promise<string> {
-        console.log(`\n👼 Dispatching Angel: ${arg.name} for mission: "${arg.mission.slice(0, 50)}..."`);
+        logger.info(`\n👼 Dispatching Angel: ${arg.name} for mission: "${arg.mission.slice(0, 50)}..."`);
 
         try {
             // 1. Configure Tools
@@ -33,7 +34,7 @@ export class DispatchAngelTool extends StructuredTool {
                 .filter(t => arg.capabilities.includes(t.name as any))
                 .map(t => t.tool);
 
-            console.log(`👼 [${arg.name}] Configured with ${angelTools.length} tools: ${angelTools.map(t => t.name).join(', ')}`);
+            logger.debug(`👼 [${arg.name}] Configured with ${angelTools.length} tools: ${angelTools.map(t => t.name).join(', ')}`);
 
             if (angelTools.length === 0 && arg.capabilities.length > 0) {
                 return `Error: Requested capabilities [${arg.capabilities.join(', ')}] not found or unavailable.`;
@@ -60,7 +61,7 @@ If it is safe, reply "APPROVE".`;
             ]);
 
             const prophetVerdict = check.content.toString();
-            console.log(`🛡️ Prophet Guard Verdict: ${prophetVerdict}`);
+            logger.info(`🛡️ Prophet Guard Verdict: ${prophetVerdict}`);
 
             if (prophetVerdict.startsWith('REJECT')) {
                 return `⛔ MISSION BLOCKED BY THE PROPHET: ${prophetVerdict}`;
@@ -73,9 +74,9 @@ If it is safe, reply "APPROVE".`;
                 const skill = getSkill(arg.skill_focus);
                 if (skill) {
                     skillInstructions = `\n\n## SPECIALIZED SKILL: ${skill.name}\n${skill.description}\n\n### SKILL INSTRUCTIONS\n${skill.instructions}`;
-                    console.log(`👼 [${arg.name}] Loaded skill focus: ${skill.name}`);
+                    logger.info(`👼 [${arg.name}] Loaded skill focus: ${skill.name}`);
                 } else {
-                    console.warn(`👼 [${arg.name}] Warning: Skill '${arg.skill_focus}' not found.`);
+                    logger.warn(`👼 [${arg.name}] Warning: Skill '${arg.skill_focus}' not found.`);
                 }
             }
 
@@ -114,14 +115,14 @@ You have access to: ${arg.capabilities.join(', ')}.`;
                     finalAnswer = event.answer;
                 }
                 if (event.type === 'thinking') {
-                    console.log(`[${arg.name}] Thinking: ${event.message}`);
+                    logger.debug(`[${arg.name}] Thinking: ${event.message}`);
                 }
             }
 
             return `👼 [${arg.name}] Report:\n${finalAnswer}`;
 
         } catch (error) {
-            console.error(`Angel ${arg.name} failed:`, error);
+            logger.error(`Angel ${arg.name} failed:`, error);
             return `Angel execution failed: ${error}`;
         }
     }
