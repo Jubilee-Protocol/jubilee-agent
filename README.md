@@ -55,8 +55,12 @@ Every session begins and ends with a guiding verse, grounding the agent's operat
     ```
     Follow the prompts to enter your API Name, Private Key, and Wallet Secret.
 
-3.  **Required Variables**:
-    -   `OPENAI_API_KEY`: For the brain (GPT-4o). (Feel free to use your preferred LLM provider. It could be Google Gemini, Anthropic, etc. OpenAI was simply used as an example.)
+3.  **Required Variables** (at least one LLM key):
+    -   `GOOGLE_API_KEY` / `GEMINI_API_KEY`: For Google Gemini models.
+    -   `OPENAI_API_KEY`: For OpenAI models (GPT-4o, etc.).
+    -   `ANTHROPIC_API_KEY`: For Anthropic models (Claude, etc.).
+    -   `XAI_API_KEY`: For xAI models (Grok, etc.).
+    -   `OPENROUTER_API_KEY`: For OpenRouter (access many models via one key).
 
     **Optional Variables (for Onchain Treasury Use)**:
     
@@ -83,25 +87,47 @@ Every session begins and ends with a guiding verse, grounding the agent's operat
 
 ## 🚀 Usage
 
-### Option 1: The Full Experience (Web UI + Agent)
-Run the entire OS (Frontend, Backend, Database) via Docker:
-```bash
-docker compose up --build
-```
-*   **The Steward (UI)**: [http://localhost:3000](http://localhost:3000)
-*   **The Voice (API)**: [http://localhost:3001](http://localhost:3001)
+### Option 1: The Full Experience (Docker — Web UI + Agent + Database)
 
-### Option 2: Terminal Mode
-Start the classic interactive CLI agent:
+Spin up the entire Jubilee OS stack with one command:
+
+1.  **Configure your API key** (at minimum, one LLM provider):
+    ```bash
+    cp env.example .env
+    # Edit .env and set at least one API key:
+    # GOOGLE_API_KEY, OPENAI_API_KEY, or ANTHROPIC_API_KEY
+    ```
+
+2.  **Launch the stack**:
+    ```bash
+    docker compose up --build
+    ```
+
+3.  **Access Jubilee OS**:
+    -   **The Steward (UI)**: [http://localhost:3000](http://localhost:3000)
+    -   **The Voice (API)**: [http://localhost:3001](http://localhost:3001)
+
+4.  **First-time setup**: Navigate to **The Synod** (Settings) in the UI to configure your preferred model and verify your API key is active. If you skipped step 1, you can paste your API key directly in The Synod.
+
+> **Note**: Docker Compose reads variables from `.env` automatically. The database (Postgres + pgvector) is provisioned for you — no manual DB setup required.
+
+### Option 2: Terminal Mode (No Docker, No Database)
+
+Start the interactive CLI agent with zero infrastructure:
+
 ```bash
 bun start
 ```
-1.  **Select Provider**: Choose your AI provider (OpenAI, Anthropic, etc.).
-2.  **Chat**: Enter your query (e.g., "Analyze the market").
-3.  **Verbose Mode**: Add `--verbose` for debug output:
+
+1.  **Select Provider**: On first launch, you'll be prompted to choose your AI provider (Google, OpenAI, Anthropic, xAI, OpenRouter, or Ollama).
+2.  **Set API Key**: If no key is found, you'll be prompted to paste one inline — it's saved to `.env` automatically.
+3.  **Chat**: Enter your query (e.g., `"Analyze the market"`).
+4.  **Verbose Mode**: Add `--verbose` for debug output:
     ```bash
     bun start --verbose
     ```
+
+> **Note**: Terminal mode works without Postgres. Chat history persists to local files, but long-term memory (remember/recall) requires a database. To add Postgres later, set `DATABASE_URL` in `.env`.
 
 ## 🕊️ Hosts Mode ("The Lord of Hosts")
 
