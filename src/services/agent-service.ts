@@ -70,13 +70,23 @@ export class AgentService {
             }
 
         } catch (error: any) {
-            if (error.message && error.message.includes('API_KEY')) {
-                const msg = "My voice is faint. Please visit The Synod to grant me an API Key for the selected model.";
-                logService.addLog('SYSTEM', msg);
-                yield { type: 'error', error: msg };
+            const msg = error.message || '';
+            const isAuthError = (
+                msg.includes('API_KEY') ||
+                msg.includes('api_key') ||
+                msg.includes('API key') ||
+                msg.includes('authentication') ||
+                msg.includes('Unauthorized') ||
+                msg.includes('401') ||
+                msg.includes('not found in environment')
+            );
+            if (isAuthError) {
+                const userMsg = "My voice is faint. Please visit The Synod to grant me an API Key for the selected model.";
+                logService.addLog('SYSTEM', userMsg);
+                yield { type: 'error', error: userMsg };
             } else {
-                logService.addLog('ERROR', `Agent Crash: ${error.message}`);
-                yield { type: 'error', error: error.message };
+                logService.addLog('ERROR', `Agent Crash: ${msg}`);
+                yield { type: 'error', error: msg };
             }
         } finally {
             this.isRunning = false;

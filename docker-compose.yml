@@ -12,9 +12,13 @@ services:
       - NODE_ENV=production
       - JUBILEE_ADMIN_TOKEN=${JUBILEE_ADMIN_TOKEN:-admin_password}
       - JUBILEE_READ_TOKEN=${JUBILEE_READ_TOKEN:-public_read}
-      # Pass through other keys
+      # LLM API Keys
       - OPENAI_API_KEY=${OPENAI_API_KEY}
       - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY}
+      - GOOGLE_API_KEY=${GOOGLE_API_KEY}
+      - XAI_API_KEY=${XAI_API_KEY}
+      - OPENROUTER_API_KEY=${OPENROUTER_API_KEY}
+      # Treasury
       - CDP_API_KEY_NAME=${CDP_API_KEY_NAME}
       - CDP_API_KEY_PRIVATE_KEY=${CDP_API_KEY_PRIVATE_KEY}
       - NETWORK_ID=${NETWORK_ID:-base-mainnet}
@@ -25,6 +29,12 @@ services:
     depends_on:
       jubilee-db:
         condition: service_healthy
+    healthcheck:
+      test: [ "CMD-SHELL", "curl -sf http://localhost:3001/health || exit 1" ]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 15s
     command: [ "sh", "-c", "bun run db:push && bun run src/index.tsx" ]
 
   # The Shell (Frontend)

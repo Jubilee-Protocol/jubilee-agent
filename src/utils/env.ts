@@ -7,13 +7,15 @@ config({ quiet: true });
 type ProviderConfig = {
   displayName: string;
   apiKeyEnvVar?: string;
+  alternateEnvVar?: string;
 };
 
 // Single source of truth for all provider configuration
 const PROVIDERS: Record<string, ProviderConfig> = {
   openai: { displayName: 'OpenAI', apiKeyEnvVar: 'OPENAI_API_KEY' },
   anthropic: { displayName: 'Anthropic', apiKeyEnvVar: 'ANTHROPIC_API_KEY' },
-  google: { displayName: 'Google', apiKeyEnvVar: 'GOOGLE_API_KEY' },
+  google: { displayName: 'Google', apiKeyEnvVar: 'GOOGLE_API_KEY', alternateEnvVar: 'GEMINI_API_KEY' },
+  xai: { displayName: 'xAI', apiKeyEnvVar: 'XAI_API_KEY' },
   openrouter: { displayName: 'OpenRouter', apiKeyEnvVar: 'OPENROUTER_API_KEY' },
   ollama: { displayName: 'Ollama' },
 };
@@ -27,9 +29,12 @@ export function getProviderDisplayName(providerId: string): string {
 }
 
 export function checkApiKeyExistsForProvider(providerId: string): boolean {
-  const apiKeyName = getApiKeyNameForProvider(providerId);
-  if (!apiKeyName) return true;
-  return checkApiKeyExists(apiKeyName);
+  const provider = PROVIDERS[providerId];
+  if (!provider?.apiKeyEnvVar) return true;
+  if (checkApiKeyExists(provider.apiKeyEnvVar)) return true;
+  // Also check alternate env var (e.g. GEMINI_API_KEY for Google)
+  if (provider.alternateEnvVar && checkApiKeyExists(provider.alternateEnvVar)) return true;
+  return false;
 }
 
 export function checkApiKeyExists(apiKeyName: string): boolean {

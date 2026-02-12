@@ -1,7 +1,7 @@
 import { OpenAIEmbeddings } from '@langchain/openai';
 import { OllamaEmbeddings } from '@langchain/ollama';
 import { GoogleGenerativeAIEmbeddings } from "@langchain/google-genai";
-import { db } from '../db/index.js';
+import { db, isDbAvailable } from '../db/index.js';
 import { memories } from '../db/schema.js';
 import { cosineDistance, desc, gt, sql, eq } from 'drizzle-orm';
 import { Embeddings } from '@langchain/core/embeddings';
@@ -55,6 +55,10 @@ export class MemoryManager {
     }
 
     async remember(text: string, metadata: Record<string, any> = {}): Promise<string> {
+        if (!(await isDbAvailable())) {
+            logger.debug('🧠 DB unavailable — memory not persisted.');
+            return 'offline';
+        }
         try {
             logger.debug(`🧠 Memorizing: "${text.slice(0, 30)}..."`);
             const embedding = await this.embeddings.embedQuery(text);
@@ -73,6 +77,9 @@ export class MemoryManager {
     }
 
     async recall(query: string, limit: number = 5): Promise<{ id: number, text: string, score: number, metadata: any }[]> {
+        if (!(await isDbAvailable())) {
+            return [];
+        }
         try {
             const queryVector = await this.embeddings.embedQuery(query);
 
@@ -106,6 +113,9 @@ export class MemoryManager {
     }
 
     async forget(id: number): Promise<boolean> {
+        if (!(await isDbAvailable())) {
+            return false;
+        }
         try {
             logger.debug(`🧠 Forgetting memory ID: ${id}`);
             await db.delete(memories).where(eq(memories.id, id));

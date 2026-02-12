@@ -52,16 +52,27 @@ interface ModelOpts {
 
 type ModelFactory = (name: string, opts: ModelOpts, apiKeys?: Record<string, string>) => BaseChatModel;
 
-function getApiKey(envVar: string, providerName: string, overrides?: Record<string, string>): string {
+function getApiKey(envVar: string, providerName: string, overrides?: Record<string, string>, fallbackEnvVar?: string): string {
   // Check override first
   if (overrides && overrides[envVar]) {
     return overrides[envVar];
   }
-  const apiKey = process.env[envVar];
-  if (!apiKey) {
-    throw new Error(`${envVar} not found in environment variables (and no override provided)`);
+  // Check override for fallback key
+  if (fallbackEnvVar && overrides && overrides[fallbackEnvVar]) {
+    return overrides[fallbackEnvVar];
   }
-  return apiKey;
+  const apiKey = process.env[envVar];
+  if (apiKey) {
+    return apiKey;
+  }
+  // Try fallback env var
+  if (fallbackEnvVar) {
+    const fallback = process.env[fallbackEnvVar];
+    if (fallback) {
+      return fallback;
+    }
+  }
+  throw new Error(`${envVar} not found in environment variables (and no override provided)`);
 }
 
 const MODEL_PROVIDERS: Record<string, ModelFactory> = {
@@ -75,7 +86,7 @@ const MODEL_PROVIDERS: Record<string, ModelFactory> = {
     new ChatGoogleGenerativeAI({
       model: name,
       ...opts,
-      apiKey: getApiKey('GOOGLE_API_KEY', 'Google', apiKeys),
+      apiKey: getApiKey('GOOGLE_API_KEY', 'Google', apiKeys, 'GEMINI_API_KEY'),
     }),
   'grok-': (name, opts, apiKeys) =>
     new ChatOpenAI({

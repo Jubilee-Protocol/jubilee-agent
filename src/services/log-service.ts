@@ -1,4 +1,4 @@
-import { db } from '../db/index.js';
+import { db, isDbAvailable } from '../db/index.js';
 import { logs } from '../db/schema.js';
 import { desc } from 'drizzle-orm';
 import { logger as cliLogger } from '../utils/logger.js';
@@ -39,22 +39,27 @@ class LogService {
 
         cliLogger.debug(`[${type}] ${message}`);
 
-        // 2. Persist to DB (Fire and Forget but log error)
-        try {
-            await db.insert(logs).values({
-                type,
-                message,
-                metadata,
-                timestamp: new Date(timestamp)
-            });
-        } catch (e) {
-            cliLogger.error('Failed to persist log:', e);
+        // 2. Persist to DB if available (Fire and Forget)
+        if (await isDbAvailable()) {
+            try {
+                await db.insert(logs).values({
+                    type,
+                    message,
+                    metadata,
+                    timestamp: new Date(timestamp)
+                });
+            } catch (e) {
+                cliLogger.error('Failed to persist log:', e);
+            }
         }
     }
 
     // Now async to fetch from DB? Or return buffer mixed with DB?
     // For V1 "Epistle", reading from efficient DB query is better than storing 1000 items in RAM.
     async getLogs(limit = 100): Promise<LogEntry[]> {
+        if (!(await isDbAvailable())) {
+            return this.buffer;
+        }
         try {
             const result = await db.select().from(logs).orderBy(desc(logs.timestamp)).limit(limit);
             return result.map(r => ({
