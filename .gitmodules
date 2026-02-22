@@ -1,0 +1,3 @@
+[submodule "src/skills/jubilee"]
+	path = src/skills/jubilee
+	url = https://github.com/Jubilee-Protocol/Openclaw-Skill-Jubilee.git
