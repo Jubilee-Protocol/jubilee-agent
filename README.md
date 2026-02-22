@@ -241,7 +241,25 @@ Jubilee uses a centralized logger (`src/utils/logger.ts`) that keeps the Ink CLI
 -   **Treasury Whitelist**: All transfer operations are validated against `TREASURY_WHITELIST` before execution.
 -   **Resilience**: The Memory system degrades gracefully if local AI services (Ollama) are offline.
 
-## �🤝 Contribution
+## 💛 Support the Mission
+
+Jubilee OS is open source and built as a labor of love. Maintaining and advancing this project — along with the broader Jubilee Protocol ecosystem, including the [OpenClaw Jubilee Skill](https://github.com/Jubilee-Protocol/Openclaw-Skill-Jubilee) — takes significant time, energy, and resources.
+
+If Jubilee has been a blessing to your ministry, your team, or your work, please consider making a donation. Every contribution — no matter the size — helps us keep building tools that serve the Kingdom.
+
+**Your donations help fund:**
+- 🛠️ Continued development and maintenance of Jubilee OS
+- 🧠 New AI capabilities and skill integrations
+- 🔒 Security hardening and infrastructure costs
+- 📖 Documentation, tutorials, and community support
+
+[![Donate Crypto](https://img.shields.io/badge/Donate-Crypto-f7931a?logo=bitcoin&logoColor=white)](https://commerce.coinbase.com/checkout/122a2979-e559-44b9-bb9d-2ff0c6a3025b)
+
+> *"Each of you should give what you have decided in your heart to give, not reluctantly or under compulsion, for God loves a cheerful giver."* — 2 Corinthians 9:7
+
+---
+
+## 🤝 Contribution
 
 We welcome contributions! Please fork the repo and submit a PR.
 
