@@ -20,8 +20,9 @@ jobs:
             command: bun test
     steps:
       - uses: actions/checkout@v4
-        with:
-          submodules: recursive
+
+      - name: Init submodules
+        run: git submodule update --init src/skills/jubilee
 
       - uses: oven-sh/setup-bun@v2
         with:
