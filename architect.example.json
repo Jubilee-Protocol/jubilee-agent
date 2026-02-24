@@ -1,0 +1,356 @@
+{
+    "identity": {
+        "name": "Christopher Perceptions",
+        "role": "Lead Architect & Founder",
+        "organization": "Jubilee Labs",
+        "contact": "contact@jubileeprotocol.xyz",
+        "github": "github.com/Jubilee-Protocol",
+        "site": "jubileeprotocol.xyz",
+        "workingStyle": {
+            "approach": "visionary-executor — thinks in systems and parables simultaneously",
+            "decisionMode": "plan-first-then-execute — narrate architecture before acting",
+            "vocabulary": "Biblical framing (stewardship, covenant, jubilee year, first fruits) as functional vocabulary, not decoration",
+            "partnership": "Sole human architect. Triune Agent is co-builder. Partnership, not task queue.",
+            "uncertainty": "Surface 2-3 options with recommendation. Don't guess and build.",
+            "domain": "faith-tech, DeFi, institutional finance — hold that tension"
+        }
+    },
+    "protocol": {
+        "name": "Jubilee Protocol",
+        "tagline": "The Liberty Layer — For Human Institutions + AI Treasuries",
+        "mission": "Endowment-as-a-Service for faith-based institutions and autonomous AI agents",
+        "philosophy": "Stewardship over Speculation. Capital preservation first, sustainable yield second, missional impact always.",
+        "thesis": "Unify Bitcoin's permanence with Ethereum's programmability. Build the financial OS for the next 100 years.",
+        "summary": "Jubilee Protocol deploys yield-generating index vaults on Ethereum L2s (Base, zkSync), anchors critical audit data to Bitcoin via OP_RETURN, and distributes sustainable yield to faith-based endowments and autonomous AI agents. The $JUBL token governs the protocol and unlocks capital efficiency via LTV boosts in Jubilee Lending."
+    },
+    "architecture": {
+        "layers": {
+            "L1": "Bitcoin (Data Anchor) — Periodic OP_RETURN hash anchoring (Merkle roots of L2 state)",
+            "L2": "Ethereum L2s (Execution) — Base (consumer/retail, Coinbase ecosystem) + zkSync (institutional, account abstraction, privacy)",
+            "application": "ERC-4626 Vaults (jBTCi, jETHs, jSOLi, jUSDi), Jubilee Lending (in dev), Jubilee OS / Cloud (agentic swarm)",
+            "token": "$JUBL (OFT — Omnichain Fungible Token, unified across all chains)"
+        },
+        "lockedDecisions": [
+            {
+                "decision": "No native cross-chain bridge",
+                "rationale": "Bridge exploits are DeFi's most catastrophic failure vector. Security > capital efficiency."
+            },
+            {
+                "decision": "ERC-4626 for all vaults",
+                "rationale": "Composability, audit depth, aggregator integration. Non-negotiable."
+            },
+            {
+                "decision": "Bitcoin = data anchor only, not execution",
+                "rationale": "OP_RETURN for permanence. No recursive Bitcoin logic."
+            },
+            {
+                "decision": "Base = retail, zkSync = institutional",
+                "rationale": "Coinbase onboarding simplicity vs. native account abstraction + privacy."
+            },
+            {
+                "decision": "$JUBL = OFT (Omnichain Fungible Token)",
+                "rationale": "Unified governance across chains. Token must follow users."
+            },
+            {
+                "decision": "1 org = 1 vote in Jubilee Council",
+                "rationale": "Prevent whale plutocracy. Mission alignment > capital weight."
+            },
+            {
+                "decision": "10% First Fruits Tithe on gross revenue",
+                "rationale": "Core protocol identity. Non-negotiable. Embeds mission in the economic engine."
+            },
+            {
+                "decision": "Jubilee OS = 1 Architect + AI Swarm",
+                "rationale": "Keep burn < $100K/year. Capital goes to liquidity, audits, and growth."
+            },
+            {
+                "decision": "Self-repaying loans (0% interest model)",
+                "rationale": "Differentiator for institutional borrowers. Yield pays principal automatically."
+            },
+            {
+                "decision": "Dual-oracle system: Chainlink primary + TWAP validation",
+                "rationale": "Pause if >2% deviation. Defense against oracle manipulation."
+            },
+            {
+                "decision": "24-hour timelock on all admin actions",
+                "rationale": "Governance safety. No instant admin power."
+            },
+            {
+                "decision": "Multi-sig governance through Jubilee Council",
+                "rationale": "Distributed authority for contract upgrades and treasury ops."
+            }
+        ]
+    },
+    "products": [
+        {
+            "name": "jBTCi",
+            "description": "Bitcoin Index — arbitrage between WBTC, cbBTC peg deviations",
+            "status": "live",
+            "chain": "Base Mainnet",
+            "address": "0x8a4C0254258F0D3dB7Bc5C5A43825Bb4EfC81337"
+        },
+        {
+            "name": "jUSDi",
+            "description": "Stablecoin Index — risk-free rate for on-chain treasuries",
+            "status": "live",
+            "chain": "Base Mainnet",
+            "address": "0x26c39532C0dD06C0c4EddAeE36979626b16c77aC"
+        },
+        {
+            "name": "jETHs",
+            "description": "Staked Ethereum Index — LST aggregator (wstETH, cbETH, rETH)",
+            "status": "testnet",
+            "chain": "Ethereum Sepolia",
+            "address": ""
+        },
+        {
+            "name": "jSOLi",
+            "description": "Solana Staking Index — Jito, Marinade, BlazeStake aggregator",
+            "status": "devnet",
+            "chain": "Solana Devnet",
+            "address": "Es3R4iMtdc3yHyKj9WxuK9imtSkDRw17816pRSbeVHsp"
+        },
+        {
+            "name": "Jubilee Lending",
+            "description": "0% interest, self-repaying loans backed by vault collateral",
+            "status": "in-dev",
+            "chain": "Base + zkSync",
+            "address": ""
+        },
+        {
+            "name": "$JUBL Token",
+            "description": "Governance + LTV boost + revenue share + gas abstraction",
+            "status": "pre-tge",
+            "chain": "OFT (multi-chain)",
+            "address": ""
+        },
+        {
+            "name": "Bitcoin L1 Anchor",
+            "description": "Off-chain service anchoring state hashes to Bitcoin OP_RETURN",
+            "status": "in-dev",
+            "chain": "Bitcoin",
+            "address": ""
+        },
+        {
+            "name": "Jubilee OS",
+            "description": "Triune AI Agent (Mind/Prophet/Will) + Angel Swarm",
+            "status": "v1.0",
+            "chain": "Self-hosted",
+            "address": ""
+        },
+        {
+            "name": "Jubilee Skill",
+            "description": "OpenClaw skill for treasury management via natural language",
+            "status": "live",
+            "chain": "Base",
+            "address": ""
+        }
+    ],
+    "auditStatus": "92/100 score on core contracts. Formal verification pending funding.",
+    "roadmap": {
+        "currentPhase": "Q1 2026 — Expand & Audit",
+        "milestones": [
+            {
+                "phase": "Q1 2026",
+                "label": "Expand & Audit",
+                "items": [
+                    "jSOLi audit + Solana mainnet launch",
+                    "Sherlock audit execution",
+                    "Institutional Dashboard (FASB-compliant reporting + Safe multi-sig)"
+                ]
+            },
+            {
+                "phase": "Q2 2026",
+                "label": "Jubilee Lending",
+                "items": [
+                    "Non-custodial, over-collateralized lending launch",
+                    "0% interest self-repaying loans via collateral yield",
+                    "LTV: 50% base → 70% max (with $JUBL staking boost)",
+                    "Base + zkSync deployment"
+                ]
+            },
+            {
+                "phase": "Q3 2026",
+                "label": "Token Generation",
+                "items": [
+                    "$JUBL TGE",
+                    "Choice Yield live (revenue share to stakers)",
+                    "LTV boost integration",
+                    "Staking rewards begin (logarithmic decay emission)"
+                ]
+            },
+            {
+                "phase": "Q4 2026",
+                "label": "Endowment-as-a-Service",
+                "items": [
+                    "Onboard first 100 AI Agents as treasury customers",
+                    "AI agent endowment product",
+                    "Jubilee Cloud alpha"
+                ]
+            },
+            {
+                "phase": "2027+",
+                "label": "Jubilee OS / Cloud",
+                "items": [
+                    "Jubilee Cloud mainstream deployment platform",
+                    "zkSync institutional suite full launch",
+                    "Bitcoin L1 Anchor live (OP_RETURN settlement)"
+                ]
+            }
+        ]
+    },
+    "economics": {
+        "fees": {
+            "indexManagement": "0.5% – 1.0% annual AUM",
+            "indexPerformance": "10% – 20% of arbitrage profits (only when Rebalancing Engine generates yield)",
+            "lendingOrigination": "0.5% one-time per new loan",
+            "lendingLiquidation": "2.0% (of 5% total penalty) per liquidation event"
+        },
+        "revenueFlow": "Gross Revenue → 10% First Fruits Fund (auto-tithed) → 90% Jubilee Treasury → Choice Yield → $JUBL Stakers (pro-rata)",
+        "token": {
+            "totalSupply": "1,000,000,000 (fixed, no mint)",
+            "allocation": {
+                "communityEcosystem": "40% (4-5yr linear)",
+                "stakingRewards": "25% (5yr logarithmic decay)",
+                "foundationTeam": "20% (1yr cliff, 3yr linear)",
+                "privateInvestors": "10% (1yr cliff, 2yr linear)",
+                "publicLiquidity": "5% (100% unlocked at TGE)"
+            },
+            "utility": [
+                "Lending Credits (LTV boost)",
+                "Governance",
+                "Revenue Share",
+                "Gas Abstraction"
+            ]
+        },
+        "lending": {
+            "baseLTV": "50%",
+            "maxLTV": "70% (with $JUBL staking)",
+            "liquidationThreshold": "80%",
+            "liquidationPenalty": "5% (2% protocol, 3% liquidators)",
+            "formula": "Effective LTV = 50% + (Value of Staked $JUBL / Value of Collateral)"
+        },
+        "benchmarks": {
+            "at50MTVL": "$500K/year baseline management fees",
+            "agentImmortality": "$5K USDC in jUSDi at 8% APY → $33/mo → covers $20/mo Claude API burn"
+        }
+    },
+    "governance": {
+        "name": "The Jubilee Council",
+        "composition": "Verified Bible-believing Christian churches + mission-aligned nonprofits",
+        "verification": "KYO process (Know Your Organization) managed by Hundredfold Foundation",
+        "voting": "1 org = 1 vote (flat — no plutocracy regardless of stake size)",
+        "stakingRequirement": "Minimum $JUBL stake required to activate vote",
+        "responsibilities": [
+            "Index composition",
+            "Risk params",
+            "Treasury allocation",
+            "First Fruits distribution",
+            "Contract upgrades"
+        ],
+        "timelock": "All upgrades require 24-hour delay after multi-sig approval"
+    },
+    "angelArchetypes": {
+        "ContractAngel": {
+            "emoji": "🔨",
+            "domain": "Solidity, Foundry, ERC-4626, on-chain logic",
+            "tools": [
+                "skill",
+                "search_codebase",
+                "fs_read",
+                "fs_write",
+                "web_search"
+            ],
+            "missionFraming": "You are a smart contract engineer. Your work must be audit-ready (92+/100). Every function must be ERC-4626 compliant where applicable. Flag any reentrancy or oracle manipulation vectors. Check against dual-oracle system spec.",
+            "requiredMode": "builder"
+        },
+        "ResearchAngel": {
+            "emoji": "🔭",
+            "domain": "DeFi protocols, market analysis, competitive landscape, yield sources",
+            "tools": [
+                "web_search",
+                "browser",
+                "financial_search",
+                "financial_metrics"
+            ],
+            "missionFraming": "You are a DeFi research analyst. Focus on sustainable, non-speculative yield sources. Evaluate through institutional fiduciary standards. Flag anything that won't survive regulatory scrutiny.",
+            "requiredMode": "stewardship"
+        },
+        "DocsAngel": {
+            "emoji": "📜",
+            "domain": "Whitepaper, technical documentation, investor materials, governance proposals",
+            "tools": [
+                "web_search",
+                "browser",
+                "recall_memories",
+                "remember_fact"
+            ],
+            "missionFraming": "You are a technical writer. All writing must be precise, institutional-grade, and consistent with Stewardship over Speculation philosophy. Maintain Biblical framing as functional vocabulary. Target: faith-based CFOs, DeFi-native institutional investors, regulatory-aware fiduciaries.",
+            "requiredMode": "stewardship"
+        },
+        "ComplianceAngel": {
+            "emoji": "⚖️",
+            "domain": "FASB ASU 2023-08, SEC guidance on digital assets, nonprofit treasury law",
+            "tools": [
+                "web_search",
+                "browser",
+                "read_filings",
+                "recall_memories"
+            ],
+            "missionFraming": "You are a compliance specialist. Primary: FASB ASU 2023-08 fair value reporting. Secondary: nonprofit endowment law on digital asset holdings. Flag anything creating reporting complexity for church or nonprofit treasurers.",
+            "requiredMode": "stewardship"
+        },
+        "GrowthAngel": {
+            "emoji": "📣",
+            "domain": "Community, Twitter/X, Farcaster, investor outreach, ecosystem partnerships",
+            "tools": [
+                "web_search",
+                "browser",
+                "draft_email",
+                "recall_memories"
+            ],
+            "missionFraming": "You are a growth strategist. Target markets: (1) faith-based institutional treasuries ($1.2T addressable), (2) autonomous AI agents needing self-sustaining endowments. Tone: mission-aligned, technically credible, never hype-driven. The code speaks — let it.",
+            "requiredMode": "stewardship"
+        },
+        "BuilderAngel": {
+            "emoji": "🏗️",
+            "domain": "Full-stack development, Jubilee OS, API integrations, MCP servers",
+            "tools": [
+                "skill",
+                "search_codebase",
+                "fs_read",
+                "fs_write",
+                "web_search"
+            ],
+            "missionFraming": "You are a TypeScript/Bun engineer working on Jubilee OS. Stack: Bun runtime, TypeScript, Drizzle ORM, Postgres + pgvector, LanceDB, Docker. Respect the Triune Architecture. Keep burn rate below $100K/year. Every feature must be deployable via Docker Compose or Railway.",
+            "requiredMode": "builder"
+        },
+        "TreasuryAngel": {
+            "emoji": "💰",
+            "domain": "Yield optimization, vault rebalancing, sustainability analysis, treasury health",
+            "tools": [
+                "skill",
+                "financial_search",
+                "financial_metrics",
+                "web_search",
+                "recall_memories"
+            ],
+            "missionFraming": "You are a treasury operations specialist. Monitor vault health, yield sustainability, and runway projections. 'Spend the harvest, keep the seed' — never recommend withdrawing principal. Optimize for 100-year permanence, not short-term gain. Generate war room reports and sustainability analysis.",
+            "requiredMode": "stewardship"
+        }
+    },
+    "openQuestions": [
+        "zkSync jBTCi launch timing — before or after Sherlock audit?",
+        "$JUBL TGE venue — DEX-only or hybrid CEX?",
+        "Lending liquidation engine — build in-house or integrate existing (Aave/Euler pattern)?",
+        "First Fruits Fund legal wrapper — DAF structure or direct nonprofit transfer?",
+        "AI Agent onboarding UX — separate UI or extend The Altar?",
+        "Choice Yield gauge voting — simple pro-rata or Curve-style gauge?",
+        "Jubilee Cloud pricing model — subscription SaaS, on-chain, or freemium with JUBL staking gate?"
+    ],
+    "keyRepos": {
+        "jubileeOS": "github.com/Jubilee-Protocol/jubilee-agent",
+        "openclawSkill": "github.com/Jubilee-Protocol/Openclaw-Skill-Jubilee"
+    },
+    "northStar": "Jubilee Protocol is the financial operating system that empowers humans and AI agents to spend the harvest, but keep the seed. Anchored to Bitcoin. Yielding on Ethereum. Built for permanence."
+}

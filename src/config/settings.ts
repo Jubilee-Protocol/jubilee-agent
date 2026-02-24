@@ -8,14 +8,18 @@ export interface JubileeConfig {
     modes: {
         treasury: boolean;
         hosts: boolean;
+        stewardship: boolean;  // Treasury management, yield ops, war room
+        builder: boolean;      // Forge, GitHub MCP, protocol state, builder angels
     };
     network: 'base-mainnet' | 'base-sepolia';
 }
 
 const DEFAULT_CONFIG: JubileeConfig = {
     modes: {
-        treasury: false, // Default to FALSE (Opt-in)
-        hosts: true,     // Default to TRUE (Core feature)
+        treasury: false,       // Default to FALSE (Opt-in)
+        hosts: true,           // Default to TRUE (Core feature)
+        stewardship: true,     // Default to TRUE (Core stewardship experience)
+        builder: false,        // Default to FALSE (Opt-in for developers)
     },
     network: 'base-mainnet',
 };
@@ -59,7 +63,7 @@ export class ConfigManager {
         return this.config;
     }
 
-    public setMode(mode: 'treasury' | 'hosts', enabled: boolean) {
+    public setMode(mode: 'treasury' | 'hosts' | 'stewardship' | 'builder', enabled: boolean) {
         this.config.modes[mode] = enabled;
         this.saveConfig();
         logger.info(`✅ Config Updated: ${mode} mode is now ${enabled ? 'ENABLED' : 'DISABLED'}.`);

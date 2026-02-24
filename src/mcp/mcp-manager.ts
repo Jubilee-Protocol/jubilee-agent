@@ -3,6 +3,7 @@ import { McpClient } from './client.js';
 import { McpTool } from './tool-wrapper.js';
 import type { StructuredToolInterface } from '@langchain/core/tools';
 import { logger } from '../utils/logger.js';
+import { ConfigManager } from '../config/settings.js';
 
 export interface McpServerConfig {
     id: string;
@@ -10,6 +11,9 @@ export interface McpServerConfig {
     args?: string[];
     disabled?: boolean;
 }
+
+// MCP servers that require builder mode to be active
+const BUILDER_MODE_SERVERS = ['github'];
 
 /**
  * Singleton manager to handle all MCP server connections and tool aggregation.
@@ -31,30 +35,38 @@ export class McpManager {
 
     /**
      * Initialize connections to configured servers.
+     * Mode-aware: builder-only servers (e.g., GitHub) are skipped when builder mode is disabled.
      */
     async init(configs: McpServerConfig[]) {
         if (this.initialized) return;
 
         logger.info('🔌 Initializing MCP Manager...');
+        const config = ConfigManager.getInstance().getConfig();
 
-        for (const config of configs) {
-            if (config.disabled) continue;
+        for (const serverConfig of configs) {
+            if (serverConfig.disabled) continue;
+
+            // Skip builder-only servers when builder mode is off
+            if (BUILDER_MODE_SERVERS.includes(serverConfig.id) && !config.modes.builder) {
+                logger.info(`   - Server '${serverConfig.id}': Skipped (requires builder mode).`);
+                continue;
+            }
 
             try {
-                const client = new McpClient(config.id, config.command, config.args || []);
+                const client = new McpClient(serverConfig.id, serverConfig.command, serverConfig.args || []);
                 await client.connect();
 
                 const tools = await client.listTools();
-                logger.info(`   - Server '${config.id}': Discovered ${tools.length} tools.`);
+                logger.info(`   - Server '${serverConfig.id}': Discovered ${tools.length} tools.`);
 
                 // Wrap tools
                 const wrappedTools = tools.map(t => new McpTool(client, t));
 
-                this.clients.set(config.id, client);
+                this.clients.set(serverConfig.id, client);
                 this.tools.push(...wrappedTools);
 
             } catch (error: any) {
-                logger.error(`Failed to connect to MCP server '${config.id}': ${error.message}`);
+                logger.error(`Failed to connect to MCP server '${serverConfig.id}': ${error.message}`);
                 logger.debug(`Stack: ${error.stack}`);
                 if (error.issues) {
                     logger.debug(`Zod Issues: ${JSON.stringify(error.issues, null, 2)}`);
@@ -85,4 +97,3 @@ export class McpManager {
         this.initialized = false;
     }
 }
-

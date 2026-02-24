@@ -14,6 +14,10 @@ import { RememberFactTool, RecallMemoriesTool } from './memory-tools.js';
 import { DispatchAngelTool } from './angel-tool.js';
 import { ConfigManager } from '../config/settings.js';
 import { TreasuryServer } from '../mcp/servers/treasury/index.js';
+import { UpdateProtocolStateTool, QueryProtocolStateTool } from './protocol-state.js';
+import { CreateTaskTool, UpdateTaskTool, QueryTasksTool } from './task-tools.js';
+import { CodeExecutionTool } from './code-exec-tool.js';
+import { ProposeSafeTxTool, QuerySafeStatusTool, ProposeSquadsTxTool, QuerySquadsStatusTool } from './governance-tools.js';
 import { logger } from '../utils/logger.js';
 
 
@@ -151,6 +155,70 @@ export function getToolRegistry(model: string): RegisteredTool[] {
     }
   }
 
+  // Include Protocol State Tools (Builder Mode only)
+  if (config.modes.builder) {
+    tools.push({
+      name: 'update_protocol_state',
+      tool: new UpdateProtocolStateTool(),
+      description: 'Builder Tool: Update or insert protocol state entries (product status, audit scores, TVL, roadmap milestones).',
+    });
+    tools.push({
+      name: 'query_protocol_state',
+      tool: new QueryProtocolStateTool(),
+      description: 'Builder Tool: Query current protocol state by category or key.',
+    });
+  }
+
+  // Include Task Tools (always available when DB is connected)
+  tools.push({
+    name: 'create_task',
+    tool: new CreateTaskTool(),
+    description: 'Sprint Tool: Create a new task for persistent multi-session tracking.',
+  });
+  tools.push({
+    name: 'update_task',
+    tool: new UpdateTaskTool(),
+    description: 'Sprint Tool: Update task status, append context, or reassign.',
+  });
+  tools.push({
+    name: 'query_tasks',
+    tool: new QueryTasksTool(),
+    description: 'Sprint Tool: Query the sprint board — tasks by status, role, or priority.',
+  });
+
+  // Include Code Execution Tool (Builder Mode only)
+  if (config.modes.builder) {
+    tools.push({
+      name: 'code_exec',
+      tool: new CodeExecutionTool(),
+      description: 'Builder Tool: Execute sandboxed shell commands (forge, bun, anchor, git, etc.) for build/test/analysis.',
+    });
+  }
+
+  // Include Governance Tools (Builder Mode only)
+  if (config.modes.builder) {
+    tools.push({
+      name: 'propose_safe_tx',
+      tool: new ProposeSafeTxTool(),
+      description: 'Governance Tool: Propose a transaction to a Safe multi-sig wallet (EVM chains).',
+    });
+    tools.push({
+      name: 'query_safe_status',
+      tool: new QuerySafeStatusTool(),
+      description: 'Governance Tool: Check Safe wallet status — pending txs, signers, threshold.',
+    });
+    tools.push({
+      name: 'propose_squads_tx',
+      tool: new ProposeSquadsTxTool(),
+      description: 'Governance Tool: Propose a transaction on a Squads multi-sig (Solana).',
+    });
+    tools.push({
+      name: 'query_squads_status',
+      tool: new QuerySquadsStatusTool(),
+      description: 'Governance Tool: Check Squads multisig status — members, threshold, vault balance.',
+    });
+  }
+
   return tools;
 }
 
@@ -189,7 +257,7 @@ export function getToolsForRole(role: 'mind' | 'prophet' | 'will', model: string
 
   // Define allowed tools for each role
   // The Mind: Research and Analysis only.
-  const mindTools = ['financial_search', 'financial_metrics', 'read_filings', 'browser', 'web_search', 'skill', 'remember_fact', 'recall_memories', 'bible_lookup', 'get_wallet_details', 'get_balance', 'search_codebase'];
+  const mindTools = ['financial_search', 'financial_metrics', 'read_filings', 'browser', 'web_search', 'skill', 'remember_fact', 'recall_memories', 'bible_lookup', 'get_wallet_details', 'get_balance', 'search_codebase', 'query_protocol_state'];
 
   // The Prophet: High-level trends and strategy.
   const prophetTools = ['financial_search', 'financial_metrics', 'web_search', 'browser', 'skill', 'remember_fact', 'recall_memories', 'bible_lookup', 'draft_email', 'get_wallet_details', 'get_balance', 'search_codebase'];

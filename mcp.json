@@ -6,6 +6,14 @@
                 "dist/mcp/index.js"
             ],
             "disabled": false
+        },
+        "github": {
+            "command": "npx",
+            "args": [
+                "-y",
+                "@modelcontextprotocol/server-github"
+            ],
+            "disabled": false
         }
     }
 }
