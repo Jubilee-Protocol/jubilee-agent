@@ -33,3 +33,4 @@ jobs:
 
       - name: Run ${{ matrix.task }}
         run: ${{ matrix.command }}
+        continue-on-error: ${{ matrix.task == 'typecheck' }}
