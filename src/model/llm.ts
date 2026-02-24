@@ -88,10 +88,10 @@ const MODEL_PROVIDERS: Record<string, ModelFactory> = {
       ...opts,
       apiKey: getApiKey('GOOGLE_API_KEY', 'Google', apiKeys, 'GEMINI_API_KEY'),
       safetySettings: [
-        { category: 'HARM_CATEGORY_HARASSMENT', threshold: 'BLOCK_MEDIUM_AND_ABOVE' },
-        { category: 'HARM_CATEGORY_HATE_SPEECH', threshold: 'BLOCK_LOW_AND_ABOVE' },
-        { category: 'HARM_CATEGORY_SEXUALLY_EXPLICIT', threshold: 'BLOCK_LOW_AND_ABOVE' },
-        { category: 'HARM_CATEGORY_DANGEROUS_CONTENT', threshold: 'BLOCK_MEDIUM_AND_ABOVE' },
+        { category: 'HARM_CATEGORY_HARASSMENT' as any, threshold: 'BLOCK_MEDIUM_AND_ABOVE' as any },
+        { category: 'HARM_CATEGORY_HATE_SPEECH' as any, threshold: 'BLOCK_LOW_AND_ABOVE' as any },
+        { category: 'HARM_CATEGORY_SEXUALLY_EXPLICIT' as any, threshold: 'BLOCK_LOW_AND_ABOVE' as any },
+        { category: 'HARM_CATEGORY_DANGEROUS_CONTENT' as any, threshold: 'BLOCK_MEDIUM_AND_ABOVE' as any },
       ],
     }),
   'grok-': (name, opts, apiKeys) =>
