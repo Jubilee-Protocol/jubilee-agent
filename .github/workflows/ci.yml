@@ -20,13 +20,15 @@ jobs:
             command: bun test
     steps:
       - uses: actions/checkout@v4
+        with:
+          submodules: recursive
 
       - uses: oven-sh/setup-bun@v2
         with:
           bun-version: latest
 
       - name: Install dependencies
-        run: bun install --frozen-lockfile --ignore-scripts
+        run: bun install
 
       - name: Run ${{ matrix.task }}
         run: ${{ matrix.command }}

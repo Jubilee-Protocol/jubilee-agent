@@ -62,25 +62,23 @@ declare module '@safe-global/protocol-kit' {
 }
 
 declare module '@sqds/multisig' {
-    import { PublicKey, Connection } from '@solana/web3.js';
-
     export namespace multisig {
         namespace accounts {
             class Multisig {
                 threshold: number;
-                members: Array<{ key: PublicKey; permissions: { mask: number } }>;
+                members: Array<{ key: { toBase58(): string }; permissions: { mask: number } }>;
                 transactionIndex: bigint;
-                static fromAccountAddress(connection: Connection, address: PublicKey): Promise<Multisig>;
+                static fromAccountAddress(connection: any, address: any): Promise<Multisig>;
             }
         }
 
-        function getVaultPda(args: { multisigPda: PublicKey; index: number }): [PublicKey, number];
+        function getVaultPda(args: { multisigPda: any; index: number }): [any, number];
 
         namespace instructions {
             function vaultTransactionCreate(args: {
-                multisigPda: PublicKey;
+                multisigPda: any;
                 transactionIndex: bigint;
-                creator: PublicKey;
+                creator: any;
                 vaultIndex: number;
                 ephemeralSigners: number;
                 transactionMessage: any;
