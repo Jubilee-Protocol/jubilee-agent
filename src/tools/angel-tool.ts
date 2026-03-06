@@ -162,8 +162,17 @@ CRITICAL INSTRUCTIONS:
 
 You have access to: ${capabilities.join(', ')}.`;
 
+            // Resolve model via adapter preference
+            const preferredAdapter = arg.role ? (getAngelRole(arg.role)?.preferredAdapter) : undefined;
+            let angelModel = 'gemini-2.0-flash';
+            if (preferredAdapter) {
+                const { getAdapter } = await import('../adapters/index.js');
+                const adapter = getAdapter(preferredAdapter);
+                angelModel = adapter.defaultModel;
+            }
+
             const agentConfig: AgentConfig = {
-                model: 'gemini-2.0-flash',
+                model: angelModel,
                 systemPrompt,
                 tools: angelTools,
             };

@@ -16,10 +16,12 @@
     "README.md"
   ],
   "bin": {
-    "jubilee": "./src/index.tsx"
+    "jubilee": "./src/index.tsx",
+    "jubilee-sprint": "./src/sprint-runner.ts"
   },
   "scripts": {
     "start": "bun run src/index.tsx",
+    "sprint": "bun run src/sprint-runner.ts",
     "dev": "bun --watch run src/index.tsx",
     "build": "tsc -p tsconfig.build.json",
     "prepublishOnly": "bun run build",

@@ -140,6 +140,34 @@ export function CLI() {
       return;
     }
 
+    // Handle adapters command
+    if (query === '/adapters') {
+      const adapterInfo = async () => {
+        try {
+          const { listAdapters, testAllAdapters } = await import('./adapters/index.js');
+          const adapters = listAdapters();
+          const results = await testAllAdapters();
+          const lines = ['\n⚡ Adapter Status:\n'];
+          for (const adapter of adapters) {
+            const test = results[adapter.type];
+            const status = test?.ok ? '✅ Connected' : `❌ ${test?.error || 'Not configured'}`;
+            lines.push(`  ${adapter.name.padEnd(20)} [${adapter.type}] ${status}`);
+          }
+          injectMessage('System', lines.join('\n'));
+        } catch (e: any) {
+          setError(`Failed to check adapters: ${e.message}`);
+        }
+      };
+      adapterInfo();
+      return;
+    }
+
+    // Handle sprint command
+    if (query === '/sprint') {
+      injectMessage('System', `\n📋 Sprint Runner\n\nRun sprints from the terminal:\n  bun run src/sprint-runner.ts adapters\n  bun run src/sprint-runner.ts roles\n  bun run src/sprint-runner.ts create "Name" --tasks "ContractAngel:goal,DocsAngel:goal" --budget 5.00 --run\n  bun run src/sprint-runner.ts status\n\nOr ask me to dispatch angels inline — I'll use the adapter system automatically.`);
+      return;
+    }
+
     // Ignore if not idle (processing or in selection flow)
     if (isInSelectionFlow() || workingState.status !== 'idle') return;
 
