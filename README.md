@@ -83,6 +83,12 @@ Dispatch specialized angels for focused missions. Each has mode requirements and
 
 Angels can run tests autonomously (`forge test`, `bun test`, `anchor build`) and iterate on failures.
 
+Each angel can optionally specify a `preferredAdapter` to run on a specific model backend (e.g. ContractAngel on Claude for code analysis). Configure in `~/.jubilee/architect.json`:
+
+```json
+{ "angelArchetypes": { "ContractAngel": { "preferredAdapter": "claude" } } }
+```
+
 ---
 
 ## 🔀 Dual Modes
@@ -245,26 +251,86 @@ The GovernanceAngel manages ceremony: proposing transactions, tracking signer co
 
 ---
 
+## ⚡ Adapter Interface
+
+Angels run on a model-agnostic adapter layer. Swap the underlying LLM without changing agent logic.
+
+| Adapter | Provider | Cost Tracking | Status |
+|---------|----------|--------------|--------|
+| `gemini` | Google Gemini | ✅ | Default |
+| `claude` | Anthropic Claude | ✅ | Requires `ANTHROPIC_API_KEY` |
+| `ollama` | Local self-hosted | Free ($0) | Requires Ollama running |
+
+```bash
+# Check adapter connections
+bun run sprint adapters
+
+# Inside the interactive CLI
+/adapters
+```
+
+---
+
+## 📋 Sprint Runner
+
+Run multiple angels concurrently with budget tracking and real-time progress.
+
+```bash
+# List available angel roles
+bun run sprint roles
+
+# Create and auto-run a sprint
+bun run sprint create "Protocol Audit" \
+  --tasks "ContractAngel:Audit vault,DocsAngel:Update README" \
+  --budget 2.50 --concurrency 2 --run
+
+# Check sprint status
+bun run sprint status
+
+# Inside the interactive CLI
+/sprint
+```
+
+**Features:**
+- Concurrent angel dispatch with configurable parallelism
+- Per-angel cost and token tracking
+- Budget limits with auto-cancel when exceeded
+- Per-provider cost breakdowns
+
+---
+
 ## 📁 Project Structure
 
 ```
 jubilee-agent/
 ├── src/
+│   ├── adapters/        # Model-agnostic LLM adapters
+│   │   ├── adapter.types.ts     # AgentAdapter interface
+│   │   ├── gemini.adapter.ts    # Google Gemini (default)
+│   │   ├── claude.adapter.ts    # Anthropic Claude
+│   │   ├── ollama.adapter.ts    # Local self-hosted
+│   │   ├── pricing.ts           # Per-model cost table
+│   │   └── index.ts             # Adapter registry
 │   ├── agent/           # Triune agent architecture
 │   ├── config/          # Settings, angel roles
 │   ├── db/              # Drizzle ORM schema (logs, memories, tasks, protocol_state)
 │   ├── mcp/             # MCP servers (OpenClaw, Treasury)
 │   ├── model/           # Multi-provider LLM manager
+│   ├── services/        # Sprint board, budget tracking
+│   │   ├── sprint-board.ts      # Concurrent angel orchestration
+│   │   ├── sprint-board.types.ts
+│   │   └── budget.ts            # Per-angel cost tracking
 │   ├── skills/          # Skill modules
 │   │   ├── architect/   # Architect skill (public template)
 │   │   └── jubilee/     # OpenClaw Jubilee Skill (submodule)
 │   ├── tools/           # All agent tools
-│   │   ├── angel-tool.ts        # Angel dispatch with role templates
+│   │   ├── angel-tool.ts        # Angel dispatch with adapter support
 │   │   ├── code-exec-tool.ts    # Sandboxed shell execution
 │   │   ├── governance-tools.ts  # Safe + Squads multi-sig
 │   │   ├── protocol-state.ts    # Protocol state tracker
 │   │   ├── task-tools.ts        # Sprint tracking
 │   │   └── registry.ts          # Tool registration + mode gating
+│   ├── sprint-runner.ts # Standalone sprint CLI
 │   └── utils/           # Logger, helpers
 ├── architect.example.json  # Template for private protocol config
 ├── mcp.json                # MCP server configuration
