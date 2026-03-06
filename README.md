@@ -52,7 +52,7 @@ Jubilee OS is a **Triune AI Operating System** that can:
 
 It's model-interchangeable — swap between Gemini, GPT-4, Claude, Grok, or local models (Ollama) at any time.
 
-> **Attribution**: Built upon the excellent [Dexter](https://github.com/virattt/dexter) framework by [Virat](https://twitter.com/virattt).
+> **Attribution**: Built upon the excellent [Dexter](https://github.com/virattt/dexter) framework by [Virat](https://twitter.com/virattt). Adapter and orchestration patterns inspired by [Paperclip](https://github.com/paperclipai/paperclip) (MIT).
 
 ---
 
