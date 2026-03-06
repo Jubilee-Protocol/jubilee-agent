@@ -90,8 +90,26 @@ export class DispatchAngelTool extends StructuredTool {
         }
 
         try {
+            // 0. Resolve model: preferredAdapter → user's saved model → fallback
+            const preferredAdapter = arg.role ? (getAngelRole(arg.role)?.preferredAdapter) : undefined;
+            let angelModel: string;
+            if (preferredAdapter) {
+                const { getAdapter } = await import('../adapters/index.js');
+                const adapter = getAdapter(preferredAdapter);
+                angelModel = adapter.defaultModel;
+            } else {
+                // Use the user's saved model preference
+                try {
+                    const { getSetting } = await import('../utils/config.js');
+                    const saved = getSetting('modelId', null) as string | null;
+                    angelModel = saved || 'gemini-2.0-flash';
+                } catch {
+                    angelModel = 'gemini-2.0-flash';
+                }
+            }
+
             // 1. Configure Tools
-            const allTools = getToolRegistry('gemini-2.0-flash');
+            const allTools = getToolRegistry(angelModel);
             const angelTools = allTools
                 .filter(t => capabilities.includes(t.name as any))
                 .map(t => t.tool);
@@ -103,7 +121,7 @@ export class DispatchAngelTool extends StructuredTool {
             }
 
             // 1.5. PROPHET GUARD (Ethical Safety Check)
-            const prophet = getChatModel('gemini-2.0-flash');
+            const prophet = getChatModel(angelModel);
             const prophetSystemPrompt = `You are The Prophet, the Ethical Guard of the Jubilee System.
 Your ONLY job is to approve or reject missions based on the Core Directive.
 
@@ -161,15 +179,6 @@ CRITICAL INSTRUCTIONS:
 3. COMPLETION: When finished, provide a final summary starting with "MISSION COMPLETE:".
 
 You have access to: ${capabilities.join(', ')}.`;
-
-            // Resolve model via adapter preference
-            const preferredAdapter = arg.role ? (getAngelRole(arg.role)?.preferredAdapter) : undefined;
-            let angelModel = 'gemini-2.0-flash';
-            if (preferredAdapter) {
-                const { getAdapter } = await import('../adapters/index.js');
-                const adapter = getAdapter(preferredAdapter);
-                angelModel = adapter.defaultModel;
-            }
 
             const agentConfig: AgentConfig = {
                 model: angelModel,

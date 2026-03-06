@@ -28,11 +28,27 @@ const adapters: Record<string, AgentAdapter> = {
 };
 
 /**
- * Get an adapter by type. Falls back to Gemini (default) if unknown.
+ * Get an adapter by type. If no type specified, uses the user's saved
+ * provider preference from settings. Returns Gemini only as final fallback.
  */
 export function getAdapter(type?: string): AgentAdapter {
-    if (!type) return adapters.gemini;
-    return adapters[type] || adapters.gemini;
+    if (type && adapters[type]) return adapters[type];
+
+    // Try to use the user's saved preference
+    if (!type) {
+        try {
+            const { getSetting } = require('../utils/config.js');
+            const savedProvider = getSetting('provider', null) as string | null;
+            if (savedProvider && adapters[savedProvider]) {
+                return adapters[savedProvider];
+            }
+        } catch {
+            // Settings not available (e.g. running outside CLI context)
+        }
+    }
+
+    // Final fallback
+    return adapters.gemini;
 }
 
 /**
