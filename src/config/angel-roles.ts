@@ -19,6 +19,8 @@ export interface AngelRole {
     defaultIterations: number;
     systemPromptOverride: string;
     requiredMode: 'stewardship' | 'builder' | 'any';
+    /** Preferred adapter type (e.g. "gemini", "claude", "ollama"). Falls back to default if unset. */
+    preferredAdapter?: string;
 }
 
 /**
