@@ -3,8 +3,8 @@ import { Pool } from 'pg';
 import * as schema from './schema.js';
 import { logger } from '../utils/logger.js';
 
-// Connection String from Env
-const connectionString = process.env.DATABASE_URL || 'postgres://jubilee:jubilee123@localhost:5432/jubilee_os';
+// Connection String from Env (no hardcoded defaults — DB is optional)
+const connectionString = process.env.DATABASE_URL || '';
 
 // Lazy initialization — no connection until first use
 let _pool: Pool | null = null;

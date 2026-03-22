@@ -118,13 +118,21 @@ export class TreasuryServer {
             // Persistence: Save Wallet Data (if new)
             if (!walletDataStr && this.walletProvider) {
                 try {
-                    const data = await (this.walletProvider as any).exportWallet();
-                    const dataDir = path.dirname(WALLET_DATA_FILE);
-                    if (!fs.existsSync(dataDir)) {
-                        fs.mkdirSync(dataDir, { recursive: true });
+                    // Type-safe wallet export with runtime validation
+                    const provider = this.walletProvider as unknown as Record<string, unknown>;
+                    if (typeof provider.exportWallet === 'function') {
+                        const data = await (provider.exportWallet as () => Promise<unknown>)();
+                        if (data && typeof data === 'object') {
+                            const dataDir = path.dirname(WALLET_DATA_FILE);
+                            if (!fs.existsSync(dataDir)) {
+                                fs.mkdirSync(dataDir, { recursive: true });
+                            }
+                            fs.writeFileSync(WALLET_DATA_FILE, JSON.stringify(data), { mode: 0o600 });
+                            logger.info("💾 Wallet data saved to disk (owner-only permissions).");
+                        } else {
+                            logger.warn("⚠️ exportWallet() returned unexpected data shape, skipping persistence.");
+                        }
                     }
-                    fs.writeFileSync(WALLET_DATA_FILE, JSON.stringify(data));
-                    logger.info("💾 Wallet data saved to disk.");
                 } catch (ex) {
                     logger.warn("⚠️ Failed to persist wallet data (Export might not be supported on this provider type):", ex);
                 }
@@ -244,7 +252,13 @@ export class TreasuryServer {
                 ? process.env.TREASURY_WHITELIST.split(',').map(a => a.trim().toLowerCase())
                 : [];
 
-            if (WHITELIST.length > 0 && !WHITELIST.includes(toAddress)) {
+            // DEFAULT DENY: If no whitelist configured, block ALL transfers
+            if (WHITELIST.length === 0) {
+                logger.warn(`🚨 SECURITY: Blocked transfer — TREASURY_WHITELIST not configured. Set it in .env.`);
+                return `⛔ SECURITY BLOCK: No TREASURY_WHITELIST configured. Set allowed addresses in .env before transfers are permitted.`;
+            }
+
+            if (!WHITELIST.includes(toAddress)) {
                 logger.warn(`🚨 SECURITY ALERT: Blocked transfer attempt to non-whitelisted address: ${toAddress}`);
                 return `⛔ SECURITY BLOCK: The address '${toAddress}' is NOT in the Treasury Whitelist. Transfer aborted.`;
             }

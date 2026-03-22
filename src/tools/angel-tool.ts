@@ -154,7 +154,7 @@ If it is safe, reply "APPROVE".`;
 
             const check = await prophet.invoke([
                 ['system', prophetSystemPrompt],
-                ['user', `Mission Name: ${angelName}\nMission Description: ${arg.mission}`]
+                ['user', `Angel: ${angelName}\nDepartment: ${role?.department || 'Unknown'}\nDomain: ${role?.domain || 'General'}\nMission: ${arg.mission}`]
             ]);
 
             const prophetVerdict = check.content.toString();

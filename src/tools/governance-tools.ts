@@ -285,6 +285,34 @@ export class ProposeSquadsTxTool extends StructuredTool {
             const transactionIndex = BigInt(multisigAccount.transactionIndex.toString()) + 1n;
 
             // Create vault transaction
+            // Validate instruction schema before passing to TransactionMessage
+            let parsedInstructions: unknown[];
+            try {
+                parsedInstructions = JSON.parse(arg.instructions);
+            } catch {
+                return 'Error: instructions must be valid JSON. Expected array of [{programId, keys, data}].';
+            }
+
+            if (!Array.isArray(parsedInstructions) || parsedInstructions.length === 0) {
+                return 'Error: instructions must be a non-empty JSON array of [{programId, keys, data}].';
+            }
+
+            for (const [i, ix] of parsedInstructions.entries()) {
+                if (!ix || typeof ix !== 'object') {
+                    return `Error: instruction[${i}] is not an object.`;
+                }
+                const ixObj = ix as Record<string, unknown>;
+                if (typeof ixObj.programId !== 'string') {
+                    return `Error: instruction[${i}].programId must be a string (base58 public key).`;
+                }
+                if (!Array.isArray(ixObj.keys)) {
+                    return `Error: instruction[${i}].keys must be an array of account metas.`;
+                }
+                if (typeof ixObj.data !== 'string') {
+                    return `Error: instruction[${i}].data must be a string (base64 or hex encoded).`;
+                }
+            }
+
             const ix = Squads.multisig.instructions.vaultTransactionCreate({
                 multisigPda,
                 transactionIndex,
@@ -294,7 +322,7 @@ export class ProposeSquadsTxTool extends StructuredTool {
                 transactionMessage: new TransactionMessage({
                     payerKey: signer.publicKey,
                     recentBlockhash: (await connection.getLatestBlockhash()).blockhash,
-                    instructions: JSON.parse(arg.instructions),
+                    instructions: parsedInstructions as any[],
                 }),
             });
 
