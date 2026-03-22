@@ -175,22 +175,99 @@ async function fetchVerse(reference: string): Promise<DailyVerse> {
     }
 }
 
-// ── Metrics (placeholder — real data comes from MCP servers at runtime) ─────
+// ── Live Metrics from CoinGecko + DeFiLlama ────────────────────────────────
 
 interface ProtocolMetrics {
     tvl: string;
     jbtciApy: string;
     jusdiApy: string;
     jublPrice: string;
+    btcPrice: string;
 }
 
-function getPlaceholderMetrics(): ProtocolMetrics {
-    return {
-        tvl: 'Coming soon',
-        jbtciApy: 'Coming soon',
-        jusdiApy: 'Coming soon',
-        jublPrice: 'Coming soon',
+const COINGECKO_BASE = 'https://api.coingecko.com/api/v3';
+
+/**
+ * Fetch live protocol metrics from CoinGecko and DeFiLlama.
+ * Falls back gracefully if API keys are missing or requests fail.
+ */
+async function fetchLiveMetrics(): Promise<ProtocolMetrics> {
+    const apiKey = process.env.COINGECKO_API_KEY;
+    const headers: Record<string, string> = {
+        'Accept': 'application/json',
     };
+    if (apiKey) {
+        headers['x-cg-demo-api-key'] = apiKey;
+    }
+
+    const metrics: ProtocolMetrics = {
+        tvl: 'N/A',
+        jbtciApy: 'N/A',
+        jusdiApy: 'N/A',
+        jublPrice: 'N/A',
+        btcPrice: 'N/A',
+    };
+
+    // 1. BTC price (context for jBTCi)
+    try {
+        const res = await fetch(
+            `${COINGECKO_BASE}/simple/price?ids=bitcoin&vs_currencies=usd&include_24hr_change=true`,
+            { headers }
+        );
+        if (res.ok) {
+            const data = await res.json() as any;
+            const btc = data.bitcoin;
+            if (btc) {
+                metrics.btcPrice = `$${Number(btc.usd).toLocaleString('en-US', { maximumFractionDigits: 0 })}`;
+                const change = btc.usd_24h_change;
+                if (change !== undefined) {
+                    const sign = change >= 0 ? '+' : '';
+                    metrics.btcPrice += ` (${sign}${change.toFixed(1)}%)`;
+                }
+            }
+        }
+    } catch (e) {
+        logger.debug('CoinGecko BTC price fetch failed:', e);
+    }
+
+    // 2. JUBL token price (search by contract or id if listed)
+    try {
+        const res = await fetch(
+            `${COINGECKO_BASE}/simple/price?ids=jubilee-protocol&vs_currencies=usd`,
+            { headers }
+        );
+        if (res.ok) {
+            const data = await res.json() as any;
+            if (data['jubilee-protocol']?.usd) {
+                metrics.jublPrice = `$${data['jubilee-protocol'].usd}`;
+            }
+        }
+    } catch (e) {
+        logger.debug('CoinGecko JUBL price fetch failed:', e);
+    }
+
+    // 3. TVL from DeFiLlama (free, no key needed)
+    try {
+        const res = await fetch('https://api.llama.fi/protocol/jubilee', {
+            headers: { 'Accept': 'application/json' },
+        });
+        if (res.ok) {
+            const data = await res.json() as any;
+            if (data.currentChainTvls) {
+                const totalTvl = Object.values(data.currentChainTvls as Record<string, number>)
+                    .reduce((sum: number, v: number) => sum + v, 0);
+                if (totalTvl > 0) {
+                    metrics.tvl = totalTvl >= 1_000_000
+                        ? `$${(totalTvl / 1_000_000).toFixed(2)}M`
+                        : `$${(totalTvl / 1_000).toFixed(1)}K`;
+                }
+            }
+        }
+    } catch (e) {
+        logger.debug('DeFiLlama TVL fetch failed:', e);
+    }
+
+    return metrics;
 }
 
 // ── Post Composition ────────────────────────────────────────────────────────
@@ -200,7 +277,7 @@ function composePost(verse: DailyVerse, metrics: ProtocolMetrics): { short: stri
         `📖 "${verse.text.slice(0, 120)}..."`,
         `— ${verse.reference} (KJV)`,
         '',
-        `📊 TVL: ${metrics.tvl} | jBTCi: ${metrics.jbtciApy} | jUSDi: ${metrics.jusdiApy}`,
+        `📊 BTC: ${metrics.btcPrice} | TVL: ${metrics.tvl}`,
         '',
         '#Jubilee #DeFi #BuildInPublic',
     ].join('\n');
@@ -212,6 +289,7 @@ function composePost(verse: DailyVerse, metrics: ProtocolMetrics): { short: stri
         `> — ${verse.reference} (KJV)`,
         '',
         `📊 **Protocol Pulse**`,
+        `• BTC: ${metrics.btcPrice}`,
         `• TVL: ${metrics.tvl}`,
         `• jBTCi APY: ${metrics.jbtciApy}`,
         `• jUSDi APY: ${metrics.jusdiApy}`,
@@ -242,6 +320,9 @@ function saveDraft(post: { short: string; long: string }, verse: DailyVerse, met
         `date: ${date}`,
         `verse: ${verse.reference}`,
         `day_of_year: ${getDayOfYear()}`,
+        `btc_price: "${metrics.btcPrice}"`,
+        `tvl: "${metrics.tvl}"`,
+        `jubl_price: "${metrics.jublPrice}"`,
         `generated: ${new Date().toISOString()}`,
         `---`,
         '',
@@ -267,7 +348,7 @@ export async function generateDailyPost(): Promise<string> {
     logger.info(`📱 Generating daily post (day ${getDayOfYear()}/365) with verse: ${verseRef}`);
 
     const verse = await fetchVerse(verseRef);
-    const metrics = getPlaceholderMetrics();
+    const metrics = await fetchLiveMetrics();
     const post = composePost(verse, metrics);
     const filePath = saveDraft(post, verse, metrics);
 
