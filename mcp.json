@@ -13,6 +13,53 @@
                 "-y",
                 "@modelcontextprotocol/server-github"
             ],
+            "env": {
+                "GITHUB_PERSONAL_ACCESS_TOKEN": "${GITHUB_PAT}"
+            },
+            "disabled": false
+        },
+        "helius": {
+            "command": "npx",
+            "args": [
+                "-y",
+                "helius-mcp-server"
+            ],
+            "env": {
+                "HELIUS_API_KEY": "${HELIUS_API_KEY}"
+            },
+            "disabled": false
+        },
+        "coingecko": {
+            "command": "npx",
+            "args": [
+                "-y",
+                "@mcp-dockmaster/mcp-cryptoprice-coingecko"
+            ],
+            "env": {
+                "COINGECKO_API_KEY": "${COINGECKO_API_KEY}"
+            },
+            "disabled": false
+        },
+        "coinmarketcap": {
+            "command": "npx",
+            "args": [
+                "-y",
+                "@mcp-dockmaster/mcp-cryptoprice-coinmarketcap"
+            ],
+            "env": {
+                "CMC_API_KEY": "${CMC_API_KEY}"
+            },
+            "disabled": false
+        },
+        "dune": {
+            "command": "npx",
+            "args": [
+                "-y",
+                "@mcp-dockmaster/mcp-server-dune"
+            ],
+            "env": {
+                "DUNE_API_KEY": "${DUNE_API_KEY}"
+            },
             "disabled": false
         }
     }

@@ -19,11 +19,13 @@ export class McpClient {
     constructor(
         private serverName: string,
         command: string,
-        args: string[] = []
+        args: string[] = [],
+        env?: Record<string, string>
     ) {
         this.transport = new StdioClientTransport({
             command,
-            args
+            args,
+            env: env ? { ...process.env, ...env } as Record<string, string> : undefined,
         });
 
         // Route MCP server stderr through logger instead of raw console

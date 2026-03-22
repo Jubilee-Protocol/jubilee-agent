@@ -114,6 +114,24 @@ export class DispatchAngelTool extends StructuredTool {
                 .filter(t => capabilities.includes(t.name as any))
                 .map(t => t.tool);
 
+            // 1.1. Inject MCP tools based on angel's department routing
+            const role = arg.role ? getAngelRole(arg.role) : undefined;
+            if (role?.mcpServers && role.mcpServers.length > 0) {
+                try {
+                    const { McpManager } = await import('../mcp/index.js');
+                    const mcpManager = McpManager.getInstance();
+                    for (const serverId of role.mcpServers) {
+                        const mcpTools = mcpManager.getToolsForServer(serverId);
+                        if (mcpTools && mcpTools.length > 0) {
+                            angelTools.push(...mcpTools);
+                            logger.debug(`👼 [${angelName}] Injected ${mcpTools.length} MCP tools from ${serverId}`);
+                        }
+                    }
+                } catch (e) {
+                    logger.warn(`👼 [${angelName}] Failed to inject MCP tools:`, e);
+                }
+            }
+
             logger.debug(`👼 [${angelName}] Configured with ${angelTools.length} tools: ${angelTools.map(t => t.name).join(', ')}`);
 
             if (angelTools.length === 0 && capabilities.length > 0) {

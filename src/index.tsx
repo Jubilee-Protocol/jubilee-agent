@@ -32,6 +32,7 @@ if (fs.existsSync(mcpConfigPath)) {
                 id: key,
                 command: value.command,
                 args: value.args,
+                env: value.env,
                 disabled: value.disabled
             }));
         }

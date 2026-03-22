@@ -9,11 +9,24 @@ export interface McpServerConfig {
     id: string;
     command: string;
     args?: string[];
+    env?: Record<string, string>;
     disabled?: boolean;
 }
 
 // MCP servers that require builder mode to be active
 const BUILDER_MODE_SERVERS = ['github'];
+
+/**
+ * Resolve env vars — replaces ${VAR} patterns with process.env values.
+ */
+function resolveEnv(env: Record<string, string>): Record<string, string> {
+    const resolved: Record<string, string> = {};
+    for (const [key, value] of Object.entries(env)) {
+        const match = value.match(/^\$\{(.+)\}$/);
+        resolved[key] = match ? (process.env[match[1]] || '') : value;
+    }
+    return resolved;
+}
 
 /**
  * Singleton manager to handle all MCP server connections and tool aggregation.
@@ -22,6 +35,7 @@ export class McpManager {
     private static instance: McpManager;
     private clients: Map<string, McpClient> = new Map();
     private tools: StructuredToolInterface[] = [];
+    private toolsByServer: Map<string, StructuredToolInterface[]> = new Map();
     private initialized: boolean = false;
 
     private constructor() { }
@@ -53,7 +67,10 @@ export class McpManager {
             }
 
             try {
-                const client = new McpClient(serverConfig.id, serverConfig.command, serverConfig.args || []);
+                // Resolve env vars for this server
+                const resolvedEnv = serverConfig.env ? resolveEnv(serverConfig.env) : undefined;
+
+                const client = new McpClient(serverConfig.id, serverConfig.command, serverConfig.args || [], resolvedEnv);
                 await client.connect();
 
                 const tools = await client.listTools();
@@ -64,6 +81,7 @@ export class McpManager {
 
                 this.clients.set(serverConfig.id, client);
                 this.tools.push(...wrappedTools);
+                this.toolsByServer.set(serverConfig.id, wrappedTools);
 
             } catch (error: any) {
                 logger.error(`Failed to connect to MCP server '${serverConfig.id}': ${error.message}`);
@@ -86,6 +104,14 @@ export class McpManager {
     }
 
     /**
+     * Get tools for a specific MCP server by ID.
+     * Used by department-based angel routing.
+     */
+    getToolsForServer(serverId: string): StructuredToolInterface[] {
+        return this.toolsByServer.get(serverId) || [];
+    }
+
+    /**
      * Cleanup connections.
      */
     async closeAll() {
@@ -94,6 +120,8 @@ export class McpManager {
         }
         this.clients.clear();
         this.tools = [];
+        this.toolsByServer.clear();
         this.initialized = false;
     }
 }
+
