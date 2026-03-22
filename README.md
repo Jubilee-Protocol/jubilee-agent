@@ -66,28 +66,52 @@ It's model-interchangeable — swap between Gemini, GPT-4, Claude, Grok, or loca
 | **The Prophet** 👁️ | Strategy & ethics | Trend analysis, mission vetting, safety guard |
 | **The Will** ⚡ | Execution | All tools — treasury, coding, deployment, governance |
 
-### The Angel Swarm (8 Specialist Agents)
+### The Angel Swarm (13 Specialist Agents)
 
-Dispatch specialized angels for focused missions. Each has mode requirements and default tools:
+Dispatch specialized angels organized by department. Each angel auto-injects its department's MCP servers at dispatch time.
 
-| Angel | Domain | Mode |
-|-------|--------|------|
-| 🔨 **ContractAngel** | Smart contract dev, testing, auditing | Builder |
-| 🔭 **ResearchAngel** | DeFi research, market analysis | Stewardship |
-| 📜 **DocsAngel** | Technical docs, whitepaper, proposals | Any |
-| ⚖️ **ComplianceAngel** | Regulatory, FASB, legal review | Stewardship |
-| 📣 **GrowthAngel** | Community, partnerships, outreach | Stewardship |
-| 🏗️ **BuilderAngel** | Full-stack dev, API integrations | Builder |
-| 💰 **TreasuryAngel** | Yield optimization, vault health | Stewardship |
-| 🏛️ **GovernanceAngel** | Safe/Squads multi-sig, council voting | Builder |
+#### Engineering
+| Angel | Domain | MCP Servers |
+|-------|--------|-------------|
+| 🔨 **ContractAngel** | Smart contract dev, testing, auditing | openclaw, github |
+| 🏗️ **BuilderAngel** | Full-stack dev, API integrations | openclaw, github |
+| ⚙️ **SystemAngel** | DevOps, CI/CD, infrastructure | openclaw, github |
+
+#### Architecture
+| Angel | Domain | MCP Servers |
+|-------|--------|-------------|
+| 📜 **DocsAngel** | Technical docs, whitepaper, proposals | openclaw, github |
+| ⚖️ **ComplianceAngel** | Regulatory, FASB, legal review | openclaw, github |
+
+#### Marketing / BD
+| Angel | Domain | MCP Servers |
+|-------|--------|-------------|
+| 📣 **GrowthAngel** | Community, partnerships, outreach | coingecko, coinmarketcap |
+| 📱 **SocialAngel** | Social media, daily posts, content | coingecko, coinmarketcap |
+| 🤝 **CommunityAngel** | Member support, FAQ, engagement | coingecko, coinmarketcap |
+
+#### Tokenomics
+| Angel | Domain | MCP Servers |
+|-------|--------|-------------|
+| 💰 **TreasuryAngel** | Yield optimization, vault health | coingecko, dune, helius |
+| 🔭 **ResearchAngel** | DeFi research, market analysis | coingecko, dune, helius |
+| 🪙 **TokenAngel** | Supply analysis, vesting, liquidity | coingecko, dune, helius |
+
+#### Governance & Pastoral
+| Angel | Domain | MCP Servers |
+|-------|--------|-------------|
+| 🏛️ **GovernanceAngel** | Safe/Squads multi-sig, council voting | openclaw, github |
+| 🕊️ **PastoralAngel** | Scripture study, sermon prep, care | — (bible + memory) |
 
 Angels can run tests autonomously (`forge test`, `bun test`, `anchor build`) and iterate on failures.
 
-Each angel can optionally specify a `preferredAdapter` to run on a specific model backend (e.g. ContractAngel on Claude for code analysis). Configure in `~/.jubilee/architect.json`:
+Override any angel's model backend via `~/.jubilee/architect.json`:
 
 ```json
 { "angelArchetypes": { "ContractAngel": { "preferredAdapter": "claude" } } }
 ```
+
+See [AGENT_MAP.md](AGENT_MAP.md) for the full department → angel → MCP routing reference.
 
 ---
 
@@ -305,35 +329,27 @@ bun run sprint status
 jubilee-agent/
 ├── src/
 │   ├── adapters/        # Model-agnostic LLM adapters
-│   │   ├── adapter.types.ts     # AgentAdapter interface
-│   │   ├── gemini.adapter.ts    # Google Gemini (default)
-│   │   ├── claude.adapter.ts    # Anthropic Claude
-│   │   ├── ollama.adapter.ts    # Local self-hosted
-│   │   ├── pricing.ts           # Per-model cost table
-│   │   └── index.ts             # Adapter registry
 │   ├── agent/           # Triune agent architecture
-│   ├── config/          # Settings, angel roles
+│   ├── config/          # Settings, angel roles (13 roles, 6 departments)
 │   ├── db/              # Drizzle ORM schema (logs, memories, tasks, protocol_state)
-│   ├── mcp/             # MCP servers (OpenClaw, Treasury)
+│   ├── mcp/             # MCP manager + clients (6 servers)
 │   ├── model/           # Multi-provider LLM manager
 │   ├── services/        # Sprint board, budget tracking
-│   │   ├── sprint-board.ts      # Concurrent angel orchestration
-│   │   ├── sprint-board.types.ts
-│   │   └── budget.ts            # Per-angel cost tracking
-│   ├── skills/          # Skill modules
-│   │   ├── architect/   # Architect skill (public template)
-│   │   └── jubilee/     # OpenClaw Jubilee Skill (submodule)
+│   ├── skills/          # Skill modules (auto-discovered SKILL.md)
+│   │   ├── architect/          # Architect skill (public template)
+│   │   ├── social-posting/     # Daily Scripture + metrics posts
+│   │   │   ├── SKILL.md        # Skill definition
+│   │   │   └── post-generator.ts  # 365-verse post generator
+│   │   └── jubilee/            # OpenClaw Jubilee Skill (submodule)
 │   ├── tools/           # All agent tools
-│   │   ├── angel-tool.ts        # Angel dispatch with adapter support
-│   │   ├── code-exec-tool.ts    # Sandboxed shell execution
-│   │   ├── governance-tools.ts  # Safe + Squads multi-sig
-│   │   ├── protocol-state.ts    # Protocol state tracker
-│   │   ├── task-tools.ts        # Sprint tracking
-│   │   └── registry.ts          # Tool registration + mode gating
+│   │   ├── angel-tool.ts       # Dispatch with dept MCP injection
+│   │   ├── code-exec-tool.ts   # Sandboxed shell execution
+│   │   ├── governance-tools.ts # Safe + Squads multi-sig
+│   │   └── registry.ts         # Tool registration + mode gating
 │   ├── sprint-runner.ts # Standalone sprint CLI
 │   └── utils/           # Logger, helpers
-├── architect.example.json  # Template for private protocol config
-├── mcp.json                # MCP server configuration
+├── AGENT_MAP.md            # Department → Angel → MCP routing
+├── mcp.json                # MCP server configuration (6 servers)
 ├── docker-compose.yml      # Full stack deployment
 └── env.example             # All environment variables
 ```
@@ -347,9 +363,14 @@ jubilee-agent/
 | `GOOGLE_API_KEY` | Gemini models | One LLM key required |
 | `OPENAI_API_KEY` | OpenAI models | One LLM key required |
 | `ANTHROPIC_API_KEY` | Anthropic models | One LLM key required |
+| `OPENROUTER_API_KEY` | OpenRouter (100+ models) | One LLM key required |
 | `DATABASE_URL` | PostgreSQL connection | Optional (enables memory + tasks) |
 | `CDP_API_KEY_NAME` | Coinbase treasury | Optional |
-| `GITHUB_PERSONAL_ACCESS_TOKEN` | GitHub MCP (Builder mode) | Optional |
+| `GITHUB_PAT` | GitHub MCP (Builder mode) | Optional |
+| `HELIUS_API_KEY` | Solana RPC + DAS (Tokenomics dept) | Optional |
+| `COINGECKO_API_KEY` | Crypto prices + TVL (Marketing/Tokenomics) | Optional |
+| `CMC_API_KEY` | CoinMarketCap data (Marketing) | Optional |
+| `DUNE_API_KEY` | On-chain analytics (Tokenomics) | Optional |
 | `SAFE_SIGNER_KEY` | Safe multi-sig (Builder mode) | Optional |
 | `SQUADS_SIGNER_KEY` | Squads multi-sig (Builder mode) | Optional |
 
