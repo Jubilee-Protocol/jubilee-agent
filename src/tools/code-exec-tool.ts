@@ -33,6 +33,7 @@ const COMMAND_ALLOWLIST = [
  * Blocklisted patterns — rejected even if base command is allowed.
  */
 const PATTERN_BLOCKLIST = [
+    // Destructive operations
     /rm\s+(-rf?|--recursive)/i,     // No recursive deletes
     /sudo/i,                         // No privilege escalation
     /curl.*\|\s*(bash|sh)/i,         // No pipe-to-shell
@@ -46,6 +47,19 @@ const PATTERN_BLOCKLIST = [
     /git merge/i,                    // No merging (architect reviews)
     /DROP\s+TABLE/i,                 // No SQL drops
     /TRUNCATE/i,                     // No SQL truncates
+
+    // Shell metacharacter injection (chained commands bypass allowlist)
+    /;\s*\w/,                        // Semicolon chaining: `git log; curl evil`
+    /&&/,                            // AND chaining: `ls && rm -rf /`
+    /\|\|/,                          // OR chaining: `false || malicious`
+    /`[^`]+`/,                       // Backtick subshell: `rm -rf /`
+    /\$\(/,                          // Dollar-paren subshell: $(malicious)
+    /\|\s*(?!grep|head|tail|wc|sort|uniq|less|more)\w/i, // Pipe to non-safe commands
+
+    // Code injection via interpreter flags
+    /\bnode\s+(-e|--eval)\b/i,       // node --eval "..."
+    /\bbun\s+(-e|--eval)\b/i,        // bun --eval "..."
+    /\bnpx\s+(-e|--eval)\b/i,        // npx --eval "..."
 ];
 
 const MAX_TIMEOUT_MS = 120_000; // 2 minutes max

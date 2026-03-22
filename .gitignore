@@ -61,3 +61,6 @@ drafts/
 
 # Jubilee private config
 .jubilee/
+
+# Treasury wallet data (CRITICAL — contains wallet key material)
+data/wallet_data.json

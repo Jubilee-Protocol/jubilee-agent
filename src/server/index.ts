@@ -8,11 +8,19 @@ import { logger as cliLogger } from '../utils/logger.js';
 import { TreasuryServer } from '../mcp/servers/treasury/index.js';
 import { JUBILEE_VAULTS } from '../config/assets.js';
 import { AgentService } from '../services/agent-service.js';
+import { timingSafeEqual } from 'crypto';
 
 const app = new Hono();
 
-// Enable CORS for frontend
-app.use('/*', cors());
+// CORS — restricted to known origins (localhost dev + production)
+app.use('/*', cors({
+    origin: [
+        'http://localhost:3000',
+        'http://localhost:3001',
+        'https://app.jubileeprotocol.com',
+        'https://jubileeprotocol.com',
+    ],
+}));
 
 // Rate Limiting
 import { rateLimit } from './middleware/rate-limit.js';
@@ -23,9 +31,28 @@ app.get('/health', (c) => {
     return c.json({ status: 'ok', identity: 'Jubilee Agent - The Voice' });
 });
 
+/**
+ * Constant-time string comparison to prevent timing attacks.
+ */
+function safeCompare(a: string, b: string): boolean {
+    if (!a || !b) return false;
+    try {
+        const bufA = Buffer.from(a, 'utf-8');
+        const bufB = Buffer.from(b, 'utf-8');
+        if (bufA.length !== bufB.length) {
+            // Compare against self to keep timing constant, then return false
+            timingSafeEqual(bufA, bufA);
+            return false;
+        }
+        return timingSafeEqual(bufA, bufB);
+    } catch {
+        return false;
+    }
+}
+
 // Authentication Middleware
 app.use('/*', async (c, next) => {
-    // Skip auth for health check (already handled above, but good practice for broader matching)
+    // Skip auth for health check (already handled above)
     if (c.req.path === '/health') {
         await next();
         return;
@@ -35,28 +62,25 @@ app.use('/*', async (c, next) => {
     const adminToken = process.env.JUBILEE_ADMIN_TOKEN;
     const readToken = process.env.JUBILEE_READ_TOKEN;
 
-    // If no tokens set, warn and allow (Dev Mode)
+    // DEFAULT DENY: If no tokens configured, reject all requests
     if (!adminToken && !readToken) {
-        cliLogger.warn("⚠️ SECURITY WARNING: No tokens set. API is open.");
-        await next();
-        return;
+        cliLogger.warn("⛔ No auth tokens configured. Set JUBILEE_ADMIN_TOKEN in .env.");
+        return c.json({ error: 'Server not configured: auth tokens required.' }, 503);
     }
 
-    const providedToken = authHeader?.replace('Bearer ', '');
+    const providedToken = authHeader?.replace('Bearer ', '') || '';
 
-    // Permission Logic
-    const isAdmin = providedToken === adminToken;
-    const isReader = providedToken === readToken;
+    // Constant-time comparison to prevent timing attacks
+    const isAdmin = adminToken ? safeCompare(providedToken, adminToken) : false;
+    const isReader = readToken ? safeCompare(providedToken, readToken) : false;
     const isReadMethod = c.req.method === 'GET';
 
     if (isAdmin) {
-        // Admin can do anything
         await next();
         return;
     }
 
     if (isReader && isReadMethod) {
-        // Reader can only GET
         await next();
         return;
     }
