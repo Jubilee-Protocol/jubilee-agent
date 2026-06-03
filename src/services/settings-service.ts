@@ -17,12 +17,40 @@ export interface SystemSettings {
     };
 }
 
-const DEFAULT_SETTINGS: SystemSettings = {
-    modelProvider: 'openai',
-    modelName: 'gpt-4o',
-    apiKeys: {},
-    skills: {}
-};
+// Determine best default provider based on available env vars
+function getDefaultSettings(): SystemSettings {
+    if (process.env.OPENROUTER_API_KEY) {
+        return {
+            modelProvider: 'openrouter',
+            modelName: 'openrouter:anthropic/claude-3.5-sonnet',
+            apiKeys: {},
+            skills: {}
+        };
+    }
+    if (process.env.GOOGLE_API_KEY) {
+        return {
+            modelProvider: 'google',
+            modelName: 'gemini-2.5-flash',
+            apiKeys: {},
+            skills: {}
+        };
+    }
+    if (process.env.ANTHROPIC_API_KEY) {
+        return {
+            modelProvider: 'anthropic',
+            modelName: 'claude-3-5-sonnet-20240620',
+            apiKeys: {},
+            skills: {}
+        };
+    }
+    // Final fallback
+    return {
+        modelProvider: 'openai',
+        modelName: 'gpt-4o',
+        apiKeys: {},
+        skills: {}
+    };
+}
 
 export class SettingsService {
     private static instance: SettingsService;
@@ -47,16 +75,11 @@ export class SettingsService {
         try {
             await fs.mkdir(path.dirname(this.settingsPath), { recursive: true });
             const data = await fs.readFile(this.settingsPath, 'utf-8');
-            this.cachedSettings = { ...DEFAULT_SETTINGS, ...JSON.parse(data) };
-
-            // Merge environment keys if not in settings? 
-            // Better behavior: If key in settings, use it. If not, use ENV.
-            // But here we just return what's in settings file. 
-            // The AgentService will merge this with ENV.
+            this.cachedSettings = { ...getDefaultSettings(), ...JSON.parse(data) };
             return this.cachedSettings!;
         } catch (error) {
-            // If file doesn't exist, return default (and maybe save it?)
-            return DEFAULT_SETTINGS;
+            // No settings file — auto-detect best provider from env vars
+            return getDefaultSettings();
         }
     }
 

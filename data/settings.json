@@ -1,0 +1,6 @@
+{
+  "modelProvider": "openrouter",
+  "modelName": "openrouter:anthropic/claude-3.5-sonnet",
+  "apiKeys": {},
+  "skills": {}
+}
