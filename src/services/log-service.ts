@@ -1,26 +1,26 @@
+import { EventEmitter } from 'events';
 import { db, isDbAvailable } from '../db/index.js';
 import { logs } from '../db/schema.js';
 import { desc } from 'drizzle-orm';
 import { logger as cliLogger } from '../utils/logger.js';
 
 export interface LogEntry {
-    id: string; // We'll map DB id to string if needed, or stick to number? DB is number. Let's cast or adjust interface.
-    // Actually, let's update interface to match DB reality or map it.
-    // For now, let's keep compatibility with strict type checking.
-    // DB returns number ID.
+    id: string;
     type: string;
     message: string;
     timestamp: number;
 }
 
-class LogService {
+class LogService extends EventEmitter {
     private static instance: LogService;
 
     // In-memory buffer for immediate UI feedback if DB lags + fallback
     private buffer: LogEntry[] = [];
     private readonly MAX_BUFFER = 50;
 
-    private constructor() { }
+    private constructor() {
+        super();
+    }
 
     static getInstance(): LogService {
         if (!LogService.instance) {
@@ -31,15 +31,19 @@ class LogService {
 
     async addLog(type: string, message: string, metadata?: any) {
         const timestamp = Date.now();
+        const tempId = Math.random().toString(36).substring(7);
+        const entry: LogEntry = { id: tempId, type, message, timestamp };
 
         // 1. Add to buffer for speed
-        const tempId = Math.random().toString(36).substring(7);
-        this.buffer.unshift({ id: tempId, type, message, timestamp });
+        this.buffer.unshift(entry);
         if (this.buffer.length > this.MAX_BUFFER) this.buffer.pop();
+
+        // 2. Emit event for SSE
+        this.emit('log', entry);
 
         cliLogger.debug(`[${type}] ${message}`);
 
-        // 2. Persist to DB if available (Fire and Forget)
+        // 3. Persist to DB if available (Fire and Forget)
         if (await isDbAvailable()) {
             try {
                 await db.insert(logs).values({
@@ -54,8 +58,6 @@ class LogService {
         }
     }
 
-    // Now async to fetch from DB? Or return buffer mixed with DB?
-    // For V1 "Epistle", reading from efficient DB query is better than storing 1000 items in RAM.
     async getLogs(limit = 100): Promise<LogEntry[]> {
         if (!(await isDbAvailable())) {
             return this.buffer;

@@ -125,4 +125,20 @@ export class MemoryManager {
             return false;
         }
     }
+
+    async getStats(): Promise<{ count: number, isOnline: boolean }> {
+        if (!(await isDbAvailable())) {
+            return { count: 0, isOnline: false };
+        }
+        try {
+            const result = await db.select({ count: sql<number>`count(*)` }).from(memories);
+            return {
+                count: Number(result[0].count),
+                isOnline: true
+            };
+        } catch (e) {
+            logger.error('Failed to get stats:', e);
+            return { count: 0, isOnline: false };
+        }
+    }
 }

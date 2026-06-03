@@ -20,6 +20,18 @@
   }
 }
 
+:root {
+  /* Triune Theme Variables */
+  --triune-bg: #0b0f19; /* Deep Midnight Blue */
+  --triune-panel: #111827;
+  --triune-text: #e5e7eb;
+  --triune-text-secondary: #9ca3af;
+  --triune-gold: #d97706;
+  --triune-blue: #3b82f6;
+  --triune-purple: #8b5cf6;
+  --triune-green: #059669;
+}
+
 body {
   background: var(--background);
   color: var(--foreground);

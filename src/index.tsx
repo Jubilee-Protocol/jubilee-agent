@@ -65,13 +65,25 @@ try {
     process.stdout.write = originalStdoutWrite; // Restore stdout
 }
 
-// Initialize "The Voice" API
+// Initial "The Voice" API
 import { startVoiceServer } from './server/index.js';
-startVoiceServer(3001);
+startVoiceServer(process.env.PORT ? parseInt(process.env.PORT) : 3001);
 
-// Render the CLI app and wait for it to exit
-const { waitUntilExit } = render(<CLI />);
-await waitUntilExit();
+// Handle Headless (OS) Execution vs Interactive CLI
+const isInteractive = process.stdout.isTTY && !process.env.HEADLESS;
 
-// Cleanup MCP connections
+if (isInteractive) {
+    // Render the CLI app and wait for it to exit
+    const { waitUntilExit } = render(<CLI />);
+    await waitUntilExit();
+} else {
+    // In headless mode (OS), keep the process alive indefinitely
+    logger.info('🚀 Jubilee Core running in Headless Mode (OS)');
+    logger.info('Use the "Will" Dashboard to interact.');
+
+    // Prevent exit
+    await new Promise(() => { });
+}
+
+// Cleanup MCP connections (only reached if CLI exits or process killed)
 await McpManager.getInstance().closeAll();

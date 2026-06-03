@@ -17,11 +17,11 @@ export const DEFAULT_MODEL = 'gemini-2.0-flash';
 
 // Fast model variants by provider for lightweight tasks like summarization
 const FAST_MODELS: Record<string, string> = {
-  openai: 'gpt-4.1',
-  anthropic: 'claude-haiku-4-5',
-  google: 'gemini-3-flash-preview',
-  xai: 'grok-4-1-fast-reasoning',
-  openrouter: 'openrouter:openai/gpt-4o-mini',
+  openai: 'gpt-4o-mini',
+  anthropic: 'claude-3-haiku-20240307',
+  google: 'gemini-1.5-flash',
+  xai: 'grok-beta',
+  openrouter: 'openrouter:anthropic/claude-3.5-sonnet',
 };
 
 /**

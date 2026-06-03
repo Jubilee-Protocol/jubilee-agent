@@ -13,8 +13,8 @@ const READ_TOKEN = process.env.NEXT_PUBLIC_READ_TOKEN || 'public_read';
 const API_PROVIDERS = [
     { id: 'openai', name: 'OpenAI', model: 'gpt-4o', link: 'https://platform.openai.com/api-keys' },
     { id: 'anthropic', name: 'Anthropic', model: 'claude-3-5-sonnet-20240620', link: 'https://console.anthropic.com/settings/keys' },
-    { id: 'google', name: 'Google Gemini', model: 'gemini-1.5-pro', link: 'https://aistudio.google.com/app/apikey' },
-    { id: 'openrouter', name: 'OpenRouter', model: 'openrouter:openai/gpt-4o', link: 'https://openrouter.ai/keys' },
+    { id: 'google', name: 'Google Gemini', model: 'gemini-2.5-pro', link: 'https://aistudio.google.com/app/apikey' },
+    { id: 'openrouter', name: 'OpenRouter', model: 'openrouter:anthropic/claude-3.5-sonnet', link: 'https://openrouter.ai/keys' },
     { id: 'grok', name: 'xAI (Grok)', model: 'grok-beta', link: 'https://console.x.ai/' },
 ];
 
