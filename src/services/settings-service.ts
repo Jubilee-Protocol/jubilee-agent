@@ -22,7 +22,7 @@ function getDefaultSettings(): SystemSettings {
     if (process.env.OPENROUTER_API_KEY) {
         return {
             modelProvider: 'openrouter',
-            modelName: 'openrouter:anthropic/claude-3.5-sonnet',
+            modelName: 'openrouter:anthropic/claude-sonnet-4.6',
             apiKeys: {},
             skills: {}
         };

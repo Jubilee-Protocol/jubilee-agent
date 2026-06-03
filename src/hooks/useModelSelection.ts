@@ -174,7 +174,7 @@ export function useModelSelection(
       return;
     }
 
-    // Store with provider prefix (e.g., openrouter:anthropic/claude-3.5-sonnet)
+    // Store with provider prefix (e.g., openrouter:anthropic/claude-sonnet-4.6)
     const fullModelId = `${pendingProvider}:${modelName}`;
 
     // Check API key for the provider

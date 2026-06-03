@@ -202,7 +202,7 @@ export function ModelInputField({ providerId, currentModel, onSubmit }: ModelInp
       </Box>
       <Box marginTop={1} flexDirection="column">
         <Text color={colors.muted}>
-          Examples: anthropic/claude-3.5-sonnet, openai/gpt-4-turbo, meta-llama/llama-3-70b
+          Examples: anthropic/claude-sonnet-4.6, openai/gpt-4-turbo, meta-llama/llama-3-70b
         </Text>
       </Box>
       <Box marginTop={1}>

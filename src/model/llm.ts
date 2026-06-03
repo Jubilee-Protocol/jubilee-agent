@@ -21,7 +21,7 @@ const FAST_MODELS: Record<string, string> = {
   anthropic: 'claude-3-haiku-20240307',
   google: 'gemini-1.5-flash',
   xai: 'grok-beta',
-  openrouter: 'openrouter:anthropic/claude-3.5-sonnet',
+  openrouter: 'openrouter:anthropic/claude-sonnet-4.6',
 };
 
 /**

@@ -1,6 +1,6 @@
 {
   "modelProvider": "openrouter",
-  "modelName": "openrouter:anthropic/claude-3.5-sonnet",
+  "modelName": "openrouter:anthropic/claude-sonnet-4.6",
   "apiKeys": {},
   "skills": {}
 }
