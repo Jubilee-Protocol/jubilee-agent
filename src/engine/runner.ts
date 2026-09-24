@@ -80,8 +80,7 @@ export class StubRunner implements AgentRunner {
   }
 }
 
-/** Local Ollama runner — free, offline, no API key. Great for a 24/7 loop. */
-export class OllamaRunner implements AgentRunner {
+/** Local Ollama runner — free, offline, no API key. Great for a 24/7 loop. */export class OllamaRunner implements AgentRunner {
   private readonly model: string;
   private readonly baseUrl: string;
 
@@ -112,10 +111,48 @@ export class OllamaRunner implements AgentRunner {
   }
 }
 
+/** GitHub Models runner — free inference using the Actions built-in GITHUB_TOKEN. */
+export class GitHubModelsRunner implements AgentRunner {
+  private readonly model: string;
+  private readonly token: string;
+
+  constructor(
+    model = process.env.JUBILEE_MODEL ?? "openai/gpt-4o-mini",
+    token = process.env.GITHUB_TOKEN ?? process.env.GH_TOKEN ?? "",
+  ) {
+    this.model = model;
+    this.token = token;
+  }
+
+  async run(prompt: string): Promise<RunResult> {
+    if (!this.token) throw new Error("GITHUB_TOKEN is not set (needed for GitHub Models)");
+    const res = await fetch("https://models.github.ai/inference/chat/completions", {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${this.token}`,
+        "Content-Type": "application/json",
+        Accept: "application/json",
+      },
+      body: JSON.stringify({
+        model: this.model,
+        temperature: 0.2,
+        messages: [{ role: "user", content: prompt }],
+      }),
+    });
+    if (!res.ok) {
+      throw new Error(`GitHub Models ${res.status}: ${(await res.text()).slice(0, 300)}`);
+    }
+    const json = (await res.json()) as any;
+    const text = json?.choices?.[0]?.message?.content ?? "";
+    return { text, costUsd: 0 };
+  }
+}
+
 export function defaultRunner(): AgentRunner {
   const kind = process.env.JUBILEE_RUNNER ?? "triune";
   if (kind === "stub") return new StubRunner();
   if (kind === "ollama") return new OllamaRunner();
+  if (kind === "github-models" || kind === "github") return new GitHubModelsRunner();
   if (kind === "openrouter") return new OpenRouterRunner();
   return new TriuneRunner(Number(process.env.JUBILEE_COST_PER_CALL_USD ?? 0));
 }
