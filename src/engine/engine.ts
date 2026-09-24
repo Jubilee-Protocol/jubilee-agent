@@ -391,6 +391,22 @@ export class Engine {
     }
 
     // -- RECORD --
+    // Swap the issue label so future ticks don't repeat this work.
+    if (task.issueNumber) {
+      try {
+        await gh(
+          [
+            "issue", "edit", String(task.issueNumber),
+            "--repo", this.config.repo,
+            "--remove-label", "agent-ready",
+            "--add-label", "engine:review",
+          ],
+          this.config.repoRoot,
+        );
+      } catch (e: any) {
+        this.emit("task", `note: could not relabel issue #${task.issueNumber}: ${String(e?.message ?? e)}`, task.id);
+      }
+    }
     this.store.update(task.id, { status: "done" });
     this.emit("task", "✅ Done.", task.id);
   }

@@ -48,4 +48,4 @@ jobs:
           JUBILEE_RUNNER: ${{ vars.JUBILEE_RUNNER || 'triune' }}
           JUBILEE_CHECKS: "typecheck=bun run typecheck; test=bun test"
           OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
-        run: bun run src/engine/cli.ts run-once
+        run: bun run src/engine/cli.ts sync && bun run src/engine/cli.ts run-once
