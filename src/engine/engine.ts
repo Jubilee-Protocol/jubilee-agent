@@ -24,6 +24,7 @@ import {
   pushBranch,
   openPr,
   writePatch,
+  applyPatch,
   gh,
 } from "./git.js";
 import type { AutonomyLevel, EngineConfig, EngineEvent, EngineTask, VerifyCheck } from "./types.js";
@@ -100,8 +101,19 @@ function executePrompt(t: EngineTask, plan: string): string {
     "You are the Will — the execution stage of the Jubilee Engine.",
     `Task: ${t.title}`,
     `Approved plan:\n${plan}`,
-    "Make the smallest correct change that satisfies the task. Do not touch secrets, network config, or deploy scripts.",
+    "",
+    "Return ONLY a unified diff in git-apply format, inside a single ```diff fenced block.",
+    "Use paths relative to the repository root (a/… and b/…) and include enough context lines to apply cleanly.",
+    "Make the smallest correct change. Do NOT modify secrets, network config, or deploy scripts.",
+    "If no change is needed, return an empty diff block.",
   ].join("\n");
+}
+
+/** Pull a unified diff out of a model reply (fenced or raw). */
+function extractDiff(text: string): string {
+  const fenced = text.match(/```(?:diff|patch)?\s*\n([\s\S]*?)```/);
+  const body = (fenced ? fenced[1] : text).trim();
+  return /^diff --git |^--- |^\+\+\+ /m.test(body) ? body + "\n" : "";
 }
 
 function reviewPrompt(t: EngineTask, diff: string): string {
@@ -270,10 +282,37 @@ export class Engine {
 
       const t0 = Date.now();
       if (task.artifacts?.executeCommand) {
-        await runChecks(worktree, [{ name: "execute", cmd: task.artifacts.executeCommand }]);
+        // Deterministic path: run a shell command directly in the worktree.
+        const r = await runChecks(worktree, [{ name: "execute", cmd: task.artifacts.executeCommand }]);
+        if (!allPassed(r)) {
+          this.record(task, "execute", "fail", r[0]?.output?.slice(-500) ?? "command failed", 0, t0);
+          this.store.update(task.id, { status: "failed", lastError: "executeCommand failed" });
+          this.emit("task", "⚠️ executeCommand failed.", task.id);
+          return;
+        }
       } else {
+        // Model path: the model proposes a unified diff; we apply it in the worktree.
         const res = await this.runner.run(executePrompt(task, plan), { cwd: worktree });
         cost += res.costUsd;
+        const patch = extractDiff(res.text);
+        if (!patch) {
+          this.record(task, "execute", "fail", "model returned no diff", res.costUsd, t0);
+          this.store.update(task.id, { status: "failed", lastError: "no diff returned" });
+          this.emit("task", "⚠️ Model returned no diff.", task.id);
+          return;
+        }
+        const pf = path.join(worktree, ".engine.patch");
+        fs.writeFileSync(pf, patch);
+        try {
+          await applyPatch(worktree, pf);
+        } catch (e: any) {
+          this.record(task, "execute", "fail", `git apply failed: ${String(e?.message ?? e)}`, cost, t0);
+          this.store.update(task.id, { status: "failed", lastError: "patch did not apply" });
+          this.emit("task", "⚠️ Patch did not apply.", task.id);
+          return;
+        } finally {
+          fs.rmSync(pf, { force: true });
+        }
       }
       if (!(await hasChanges(worktree))) {
         this.record(task, "execute", "fail", "no changes produced", cost, t0);
