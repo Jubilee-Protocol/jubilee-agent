@@ -12,6 +12,7 @@ permissions:
   contents: write
   pull-requests: write
   issues: write
+  models: read
 
 concurrency:
   group: jubilee-engine
@@ -45,7 +46,9 @@ jobs:
           JUBILEE_AUTONOMY_LEVEL: "1"
           JUBILEE_DAILY_BUDGET_USD: "2"
           JUBILEE_ADVERSARIAL: "1"
-          JUBILEE_RUNNER: ${{ vars.JUBILEE_RUNNER || 'triune' }}
+          JUBILEE_RUNNER: ${{ vars.JUBILEE_RUNNER || 'github-models' }}
+          JUBILEE_MODEL: ${{ vars.JUBILEE_MODEL || 'openai/gpt-4o-mini' }}
           JUBILEE_CHECKS: "typecheck=bun run typecheck; test=bun test"
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
         run: bun run src/engine/cli.ts sync && bun run src/engine/cli.ts run-once
