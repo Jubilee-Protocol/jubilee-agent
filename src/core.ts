@@ -19,6 +19,9 @@ export { AgentService } from './services/agent-service';
 export { SettingsService } from './services/settings-service';
 export { DaemonService } from './services/daemon-service';
 
+// Engine exports (durable 24/7 autonomous build loop)
+export { Engine, loadConfig } from './engine/engine.js';
+
 // Tool exports
 export * from './tools/index';
 

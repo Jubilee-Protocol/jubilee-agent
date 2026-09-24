@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!--
+  launchd supervision for the Jubilee Engine (macOS).
+  Replace __REPO_ROOT__ and __HOME__ before installing:
+      cp deploy/engine/com.jubilee.engine.plist ~/Library/LaunchAgents/
+      launchctl load ~/Library/LaunchAgents/com.jubilee.engine.plist
+  KeepAlive=true means launchd restarts the loop if it ever exits.
+-->
+<plist version="1.0">
+<dict>
+  <key>Label</key>
+  <string>com.jubilee.engine</string>
+  <key>ProgramArguments</key>
+  <array>
+    <string>/bin/bash</string>
+    <string>-lc</string>
+    <string>cd "__REPO_ROOT__" &amp;&amp; exec bun run src/engine/cli.ts start</string>
+  </array>
+  <key>WorkingDirectory</key>
+  <string>__REPO_ROOT__</string>
+  <key>EnvironmentVariables</key>
+  <dict>
+    <key>JUBILEE_REPO_ROOT</key><string>__REPO_ROOT__</string>
+    <key>JUBILEE_AUTONOMY_LEVEL</key><string>1</string>
+    <key>JUBILEE_DAILY_BUDGET_USD</key><string>5</string>
+    <key>JUBILEE_ADVERSARIAL</key><string>1</string>
+  </dict>
+  <key>RunAtLoad</key>
+  <true/>
+  <key>KeepAlive</key>
+  <true/>
+  <key>ThrottleInterval</key>
+  <integer>30</integer>
+  <key>StandardOutPath</key>
+  <string>__HOME__/.jubilee/engine/engine.log</string>
+  <key>StandardErrorPath</key>
+  <string>__HOME__/.jubilee/engine/engine.err.log</string>
+</dict>
+</plist>

@@ -1,0 +1,51 @@
+name: Jubilee Engine
+
+# The cloud half of the mixed deployment: cheap, bursty, no always-on box.
+on:
+  schedule:
+    - cron: "*/30 * * * *" # sweep every 30 minutes
+  issues:
+    types: [labeled] # react instantly to agent-ready
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pull-requests: write
+  issues: write
+
+concurrency:
+  group: jubilee-engine
+  cancel-in-progress: false
+
+jobs:
+  tick:
+    if: github.event_name != 'issues' || github.event.label.name == 'agent-ready'
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Init submodules
+        run: git submodule update --init src/skills/jubilee
+
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      - name: Install dependencies
+        run: bun install
+
+      - name: Run one engine tick
+        env:
+          GH_TOKEN: ${{ secrets.JUBILEE_GH_TOKEN || github.token }}
+          JUBILEE_REPO: ${{ github.repository }}
+          JUBILEE_REPO_ROOT: ${{ github.workspace }}
+          JUBILEE_AUTONOMY_LEVEL: "1"
+          JUBILEE_DAILY_BUDGET_USD: "2"
+          JUBILEE_ADVERSARIAL: "1"
+          JUBILEE_RUNNER: ${{ vars.JUBILEE_RUNNER || 'triune' }}
+          JUBILEE_CHECKS: "typecheck=bun run typecheck; test=bun test"
+          OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
+        run: bun run src/engine/cli.ts run-once

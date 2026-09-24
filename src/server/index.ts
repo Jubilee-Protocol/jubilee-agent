@@ -222,7 +222,16 @@ export const startVoiceServer = (port: number) => {
         cliLogger.info(`🔑  Admin Token: ${process.env.JUBILEE_ADMIN_TOKEN ? '******' : 'NOT SET'}`);
         cliLogger.info(`📖  Read Token: ${process.env.JUBILEE_READ_TOKEN ? '******' : 'NOT SET'}`);
 
-        // Start the Autonomous Daemon
-        DaemonService.getInstance().start();
+        // Start the autonomous loop. The Engine supersedes the legacy 10-minute
+        // DaemonService heartbeat when JUBILEE_ENGINE=1 (see src/engine).
+        if (process.env.JUBILEE_ENGINE === '1') {
+            import('../engine/engine.js')
+                .then(({ Engine, loadConfig }) => {
+                    new Engine(loadConfig(), (e) => cliLogger.info(`[engine] ${e.message}`)).start();
+                })
+                .catch((err) => cliLogger.error(`Engine failed to start: ${String(err)}`));
+        } else {
+            DaemonService.getInstance().start();
+        }
     });
 };
