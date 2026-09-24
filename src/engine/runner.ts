@@ -80,9 +80,42 @@ export class StubRunner implements AgentRunner {
   }
 }
 
+/** Local Ollama runner — free, offline, no API key. Great for a 24/7 loop. */
+export class OllamaRunner implements AgentRunner {
+  private readonly model: string;
+  private readonly baseUrl: string;
+
+  constructor(
+    model = process.env.JUBILEE_MODEL ?? "spark-x2.5:1.7b",
+    baseUrl = process.env.OLLAMA_BASE_URL ?? "http://127.0.0.1:11434",
+  ) {
+    this.model = model;
+    this.baseUrl = baseUrl.replace(/\/$/, "");
+  }
+
+  async run(prompt: string): Promise<RunResult> {
+    const res = await fetch(`${this.baseUrl}/api/chat`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        model: this.model,
+        stream: false,
+        options: { temperature: 0.2 },
+        messages: [{ role: "user", content: prompt }],
+      }),
+    });
+    if (!res.ok) {
+      throw new Error(`Ollama ${res.status}: ${(await res.text()).slice(0, 300)}`);
+    }
+    const json = (await res.json()) as any;
+    return { text: json?.message?.content ?? "", costUsd: 0 };
+  }
+}
+
 export function defaultRunner(): AgentRunner {
   const kind = process.env.JUBILEE_RUNNER ?? "triune";
   if (kind === "stub") return new StubRunner();
+  if (kind === "ollama") return new OllamaRunner();
   if (kind === "openrouter") return new OpenRouterRunner();
   return new TriuneRunner(Number(process.env.JUBILEE_COST_PER_CALL_USD ?? 0));
 }

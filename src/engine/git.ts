@@ -61,6 +61,11 @@ export async function openPr(cwd: string, title: string, body: string): Promise<
   return gh(["pr", "create", "--title", title, "--body", body], cwd);
 }
 
+/** Apply a unified diff (git apply format) inside the worktree. */
+export async function applyPatch(cwd: string, patchFile: string): Promise<void> {
+  await git(["apply", "--whitespace=nowarn", patchFile], cwd);
+}
+
 /** Create a public-safe patch artifact instead of pushing (propose-only mode). */
 export async function writePatch(cwd: string, outFile: string): Promise<string> {
   // Stage everything so *untracked* files are included, then diff against HEAD.
