@@ -39,6 +39,11 @@ docker compose up --build
 
 ---
 
+> **New: The Jubilee Engine.** A durable, supervised 24/7 build loop
+> (`src/engine`) that plans → vets → executes (isolated worktree) → verifies →
+> packages a PR → records. Enable with `JUBILEE_ENGINE=1`; start at autonomy L1.
+> See [docs/ENGINE.md](docs/ENGINE.md).
+
 ## 🏗️ What Is Jubilee OS?
 
 Jubilee OS is a **Triune AI Operating System** that can:

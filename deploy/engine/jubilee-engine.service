@@ -1,0 +1,28 @@
+# systemd unit for the Jubilee Engine (Linux VPS).
+# Install:
+#   sudo cp deploy/engine/jubilee-engine.service /etc/systemd/system/
+#   sudo systemctl daemon-reload
+#   sudo systemctl enable --now jubilee-engine
+# Replace __REPO_ROOT__ and the user before installing.
+[Unit]
+Description=Jubilee Engine (24/7 autonomous build loop)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+WorkingDirectory=__REPO_ROOT__
+Environment=JUBILEE_REPO_ROOT=__REPO_ROOT__
+Environment=JUBILEE_AUTONOMY_LEVEL=1
+Environment=JUBILEE_DAILY_BUDGET_USD=5
+Environment=JUBILEE_ADVERSARIAL=1
+ExecStart=/usr/bin/env bun run src/engine/cli.ts start
+Restart=always
+RestartSec=30
+# Hardening
+NoNewPrivileges=true
+ProtectSystem=full
+ProtectHome=read-only
+
+[Install]
+WantedBy=multi-user.target
