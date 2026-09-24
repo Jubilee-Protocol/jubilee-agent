@@ -38,6 +38,12 @@ jobs:
       - name: Install dependencies
         run: bun install
 
+      - name: Start local model (Ollama — free, no API key)
+        run: |
+          docker run -d --name ollama -p 11434:11434 ollama/ollama:latest
+          for i in $(seq 1 30); do curl -sf http://127.0.0.1:11434/api/version >/dev/null && break; sleep 2; done
+          docker exec ollama ollama pull qwen2.5-coder:3b
+
       - name: Run one engine tick
         env:
           GH_TOKEN: ${{ secrets.JUBILEE_GH_TOKEN || github.token }}
@@ -46,8 +52,9 @@ jobs:
           JUBILEE_AUTONOMY_LEVEL: "1"
           JUBILEE_DAILY_BUDGET_USD: "2"
           JUBILEE_ADVERSARIAL: "1"
-          JUBILEE_RUNNER: ${{ vars.JUBILEE_RUNNER || 'github-models' }}
-          JUBILEE_MODEL: ${{ vars.JUBILEE_MODEL || 'openai/gpt-4o-mini' }}
+          JUBILEE_RUNNER: ${{ vars.JUBILEE_RUNNER || 'ollama' }}
+          JUBILEE_MODEL: ${{ vars.JUBILEE_MODEL || 'qwen2.5-coder:3b' }}
+          OLLAMA_BASE_URL: http://127.0.0.1:11434
           JUBILEE_CHECKS: "typecheck=bun run typecheck; test=bun test"
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
