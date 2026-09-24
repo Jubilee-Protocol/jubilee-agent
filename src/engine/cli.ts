@@ -32,10 +32,16 @@ async function main(): Promise<void> {
     case "enqueue": {
       const title = rest.find((a) => !a.startsWith("--")) ?? "";
       const levelArg = rest.find((a) => a.startsWith("--level=")) ?? "";
+      const execArg = rest.find((a) => a.startsWith("--exec=")) ?? "";
       const level = Number(levelArg.split("=")[1] ?? 1) as AutonomyLevel;
-      if (!title) throw new Error("usage: enqueue <title> [--level=N]");
+      if (!title) throw new Error("usage: enqueue <title> [--level=N] [--exec=CMD]");
       const store = new EngineStore(config.statePath);
-      const t = store.enqueue({ repo: config.repo, title, requiredLevel: level });
+      const t = store.enqueue({
+        repo: config.repo,
+        title,
+        requiredLevel: level,
+        artifacts: execArg ? { executeCommand: execArg.split("=").slice(1).join("=") } : undefined,
+      });
       process.stdout.write(`queued ${t.id} L${t.requiredLevel} — ${t.title}\n`);
       return;
     }

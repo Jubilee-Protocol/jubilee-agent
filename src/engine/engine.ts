@@ -320,13 +320,24 @@ export class Engine {
     let prUrl = "";
     try {
       const t0 = Date.now();
-      await commitAll(worktree, `engine: ${task.title}\n\nTask ${task.issueNumber ?? task.id} (autonomy L${this.config.autonomyLevel})`);
       if (this.config.autonomyLevel >= 1) {
+        await commitAll(
+          worktree,
+          `engine: ${task.title}\n\nTask ${task.issueNumber ?? task.id} (autonomy L${this.config.autonomyLevel})`,
+        );
         await pushBranch(worktree, branch);
-        prUrl = await openPr(worktree, `[engine] ${task.title}`, `Automated by Jubilee Engine.\n\nCloses #${task.issueNumber ?? ""}\n\n- plan: ok\n- vet: APPROVE\n- checks: ${summarize(await runChecks(worktree, this.config.checks))}\n`);
+        prUrl = await openPr(
+          worktree,
+          `[engine] ${task.title}`,
+          `Automated by Jubilee Engine (autonomy L${this.config.autonomyLevel}).\n\nCloses #${task.issueNumber ?? ""}\n\n- plan: ok\n- vet: APPROVE\n- verification: see CI on this PR\n`,
+        );
       } else {
-        const out = path.join(this.config.workRoot, `${branch}.patch`);
-        await writePatch(worktree, out);
+        // L0 propose-only: write the diff as a patch and let a human apply it.
+        // Sanitize the branch name — it contains a `/`.
+        const slug = branch.replace(/[^a-zA-Z0-9._-]/g, "-");
+        const out = path.join(this.config.workRoot, `${slug}.patch`);
+        fs.mkdirSync(this.config.workRoot, { recursive: true });
+        await writePatch(worktree, out); // `git diff HEAD` — work is NOT committed in L0
         prUrl = `patch:${out}`;
       }
       this.record(task, "package", "ok", prUrl, 0, t0);

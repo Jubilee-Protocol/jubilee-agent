@@ -61,6 +61,7 @@ export class EngineStore {
       costUsd: 0,
       createdAt: now,
       updatedAt: now,
+      artifacts: task.artifacts,
     };
     const state = this.read();
     if (full.issueNumber) {

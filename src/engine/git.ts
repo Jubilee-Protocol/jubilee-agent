@@ -63,7 +63,9 @@ export async function openPr(cwd: string, title: string, body: string): Promise<
 
 /** Create a public-safe patch artifact instead of pushing (propose-only mode). */
 export async function writePatch(cwd: string, outFile: string): Promise<string> {
-  const patch = await git(["diff", "HEAD"], cwd);
+  // Stage everything so *untracked* files are included, then diff against HEAD.
+  await git(["add", "-A"], cwd);
+  const patch = await git(["diff", "--cached", "HEAD"], cwd);
   fs.writeFileSync(outFile, patch);
   return outFile;
 }
