@@ -97,17 +97,42 @@ function vetPrompt(t: EngineTask): string {
     .join("\n");
 }
 
-function executePrompt(t: EngineTask, plan: string): string {
+function executePrompt(t: EngineTask, plan: string, fileContext = ""): string {
   return [
     "You are the Will — the execution stage of the Jubilee Engine.",
     `Task: ${t.title}`,
     `Approved plan:\n${plan}`,
+    fileContext ? `\nCurrent file contents (authoritative — diff against these):\n${fileContext}` : "",
     "",
     "Return ONLY a unified diff in git-apply format, inside a single ```diff fenced block.",
-    "Use paths relative to the repository root (a/… and b/…) and include enough context lines to apply cleanly.",
+    "Use exact repository-relative paths (a/… and b/…) and at least 3 context lines per hunk.",
+    "The diff MUST apply cleanly to the file contents shown above.",
     "Make the smallest correct change. Do NOT modify secrets, network config, or deploy scripts.",
     "If no change is needed, return an empty diff block.",
   ].join("\n");
+}
+
+/** Pick plausible file paths out of a plan. */
+function extractPaths(text: string): string[] {
+  const m = text.match(/[A-Za-z0-9_./-]+\.(?:ts|tsx|js|jsx|mjs|cjs|json|md|yml|yaml|toml|sql|css|html|sh|py|go|rs)\b/g) ?? [];
+  return [...new Set(m)].filter((p) => !p.startsWith("http") && !p.includes("..")).slice(0, 8);
+}
+
+/** Read named files from the worktree so the model can diff against real content. */
+function readFileContext(worktree: string, rels: string[]): string {
+  let out = "";
+  for (const rel of rels) {
+    const abs = path.join(worktree, rel);
+    try {
+      if (!abs.startsWith(worktree)) continue;
+      const st = fs.statSync(abs);
+      if (!st.isFile() || st.size > 40000) continue;
+      out += `\n--- ${rel} ---\n${fs.readFileSync(abs, "utf8").slice(0, 8000)}\n`;
+    } catch {
+      /* file may not exist yet — fine */
+    }
+  }
+  return out;
 }
 
 /** Pull a unified diff out of a model reply (fenced or raw). */
@@ -313,8 +338,9 @@ export class Engine {
           return;
         }
       } else {
-        // Model path: the model proposes a unified diff; we apply it in the worktree.
-        const res = await this.runner.run(executePrompt(task, plan), { cwd: worktree });
+        // Model path: give the model real file contents, then apply its diff.
+        const fileContext = readFileContext(worktree, extractPaths(plan));
+        const res = await this.runner.run(executePrompt(task, plan, fileContext), { cwd: worktree });
         cost += res.costUsd;
         const patch = extractDiff(res.text);
         if (!patch) {
