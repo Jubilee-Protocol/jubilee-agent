@@ -97,6 +97,8 @@ export interface EngineConfig {
   heartbeatMs: number;
   /** Run an independent adversarial review before packaging. */
   adversarialReview: boolean;
+  /** When true, a model REJECT blocks; otherwise model vet/review is advisory. */
+  requireReview: boolean;
   /** Local path to the working clone used as the worktree base. */
   repoRoot: string;
 }
