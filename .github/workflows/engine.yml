@@ -58,7 +58,22 @@ jobs:
           python3 -m pip install --quiet --user solc-select || true
           solc-select install 0.8.24 2>/dev/null || true
           solc-select use 0.8.24 2>/dev/null || true
-          python3 -m pip install --quiet --user aderyn 2>/dev/null || true
+          # Aderyn (pinned, checksum-verified) — https://github.com/Cyfrin/aderyn
+          A="aderyn-v0.6.8"
+          base="https://github.com/Cyfrin/aderyn/releases/download/$A"
+          asset="aderyn-x86_64-unknown-linux-gnu.tar.xz"
+          curl -sSL -o /tmp/$asset "$base/$asset" || true
+          exp=$(curl -sSL "$base/$asset.sha256" | cut -d' ' -f1) || true
+          act=$(sha256sum /tmp/$asset | cut -d' ' -f1) || true
+          if [ -n "$exp" ] && [ "$exp" = "$act" ]; then
+            mkdir -p /tmp/aderyn-x && tar -xJf /tmp/$asset -C /tmp/aderyn-x
+            mkdir -p "$HOME/.local/bin"
+            find /tmp/aderyn-x -name aderyn -type f -exec cp {} "$HOME/.local/bin/aderyn" \;
+            chmod +x "$HOME/.local/bin/aderyn" || true
+            "$HOME/.local/bin/aderyn" --version || true
+          else
+            echo "aderyn: checksum unavailable or mismatch — skipping install"
+          fi
           echo "$HOME/.local/bin" >> "$GITHUB_PATH"
 
       - name: Run one engine tick
