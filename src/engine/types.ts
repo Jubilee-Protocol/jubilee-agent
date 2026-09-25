@@ -99,6 +99,8 @@ export interface EngineConfig {
   adversarialReview: boolean;
   /** When true, a model REJECT blocks; otherwise model vet/review is advisory. */
   requireReview: boolean;
+  /** Max remediation rounds for the pre-gate verification gauntlet. */
+  gauntletRounds: number;
   /** Local path to the working clone used as the worktree base. */
   repoRoot: string;
 }
