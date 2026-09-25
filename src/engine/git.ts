@@ -61,9 +61,22 @@ export async function openPr(cwd: string, title: string, body: string): Promise<
   return gh(["pr", "create", "--title", title, "--body", body], cwd);
 }
 
-/** Apply a unified diff (git apply format) inside the worktree. */
+/** Apply a unified diff inside the worktree, with graceful fallbacks. */
 export async function applyPatch(cwd: string, patchFile: string): Promise<void> {
-  await git(["apply", "--whitespace=nowarn", patchFile], cwd);
+  try {
+    await git(["apply", "--whitespace=nowarn", patchFile], cwd);
+    return;
+  } catch {
+    /* try harder below */
+  }
+  try {
+    await git(["apply", "-3", "--whitespace=nowarn", patchFile], cwd);
+    return;
+  } catch {
+    /* fall through */
+  }
+  // Last resort: GNU patch tolerates more whitespace/fuzz.
+  await run("patch", ["-p1", "--forward", "--batch", "-i", patchFile], { cwd, maxBuffer: MAXBUF });
 }
 
 /** Create a public-safe patch artifact instead of pushing (propose-only mode). */

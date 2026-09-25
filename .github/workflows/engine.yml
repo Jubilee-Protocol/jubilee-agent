@@ -42,13 +42,13 @@ jobs:
         uses: actions/cache@v4
         with:
           path: /tmp/ollama-models
-          key: ollama-qwen2.5-coder-3b
+          key: ollama-qwen2.5-coder-7b
 
       - name: Start local model (Ollama — free, no API key)
         run: |
           docker run -d --name ollama -p 11434:11434 -v /tmp/ollama-models:/root/.ollama ollama/ollama:latest
           for i in $(seq 1 30); do curl -sf http://127.0.0.1:11434/api/version >/dev/null && break; sleep 2; done
-          docker exec ollama ollama pull qwen2.5-coder:3b
+          docker exec ollama ollama pull qwen2.5-coder:7b
 
       - name: Run one engine tick
         env:
@@ -60,7 +60,7 @@ jobs:
           JUBILEE_ADVERSARIAL: "1"
           JUBILEE_REQUIRE_REVIEW: "0"
           JUBILEE_RUNNER: ${{ vars.JUBILEE_RUNNER || 'ollama' }}
-          JUBILEE_MODEL: ${{ vars.JUBILEE_MODEL || 'qwen2.5-coder:3b' }}
+          JUBILEE_MODEL: ${{ vars.JUBILEE_MODEL || 'qwen2.5-coder:7b' }}
           OLLAMA_BASE_URL: http://127.0.0.1:11434
           JUBILEE_CHECKS: "typecheck=bun run typecheck; test=bun test"
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
