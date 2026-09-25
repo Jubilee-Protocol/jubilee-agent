@@ -39,10 +39,44 @@ docker compose up --build
 
 ---
 
-> **New: The Jubilee Engine.** A durable, supervised 24/7 build loop
-> (`src/engine`) that plans → vets → executes (isolated worktree) → verifies →
-> packages a PR → records. Enable with `JUBILEE_ENGINE=1`; start at autonomy L1.
-> See [docs/ENGINE.md](docs/ENGINE.md).
+## 🤖 The Jubilee Engine (24/7 builder)
+
+Jubilee OS can build itself. The Engine (`src/engine`) is a durable build loop:
+**plan → vet → execute (isolated worktree) → verify → package a PR → record.**
+It runs **all-cloud** on GitHub Actions — no local machine required.
+
+**Before anything reaches a human it must pass the verification gauntlet:**
+checks (typecheck/test/lint) → security scan (deps audit, Slither, Aderyn) →
+adversarial red-team — looping with automated remediation until **CLEAR**.
+Unresolved work is never presented; the gauntlet report is in the PR body.
+
+### Autonomy levels
+
+| Level | Scope | Merge |
+|---|---|---|
+| L0 | propose-only | human |
+| L1 | docs / tests / chores | auto |
+| L2 | non-critical code | auto (CI + review green) |
+| L3 | money-adjacent | **human gate** |
+| L4 | mainnet / deploy / treasury | **human gate** |
+
+The engine **only opens pull requests** — it never deploys or moves funds.
+
+### Reviewing & steering the engine
+
+The **GitHub issue tracker is the control panel**:
+
+| Label | Meaning |
+|---|---|
+| `agent-ready` | queued for the engine |
+| `human-gate` | held — needs your review |
+| `approved` | you authorize it (engine proceeds; still PR-only) |
+| `engine:review` | work finished, PR open |
+| `level:1…4`, `risk:high` | autonomy / risk classification |
+
+**Approve** = add the `approved` label. **Give instructions** = comment on the
+issue (the engine reads recent comments into its plan). The pinned **Engine
+Review Queue** issue lists everything live. See [docs/ENGINE.md](docs/ENGINE.md).
 
 ## 🏗️ What Is Jubilee OS?
 

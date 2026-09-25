@@ -101,6 +101,8 @@ export interface EngineConfig {
   requireReview: boolean;
   /** Max remediation rounds for the pre-gate verification gauntlet. */
   gauntletRounds: number;
+  /** Optional pinned issue number the engine keeps current as a review queue. */
+  reviewIssue?: number;
   /** Local path to the working clone used as the worktree base. */
   repoRoot: string;
 }
