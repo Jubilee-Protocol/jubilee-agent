@@ -14,7 +14,8 @@ import * as fs from "node:fs";
 import * as path from "node:path";
 import { EngineStore } from "./store.js";
 import { defaultRunner, type AgentRunner } from "./runner.js";
-import { runChecks, allPassed, summarize } from "./verify.js";
+import { runChecks, allPassed } from "./verify.js";
+import { runGauntlet } from "./gauntlet.js";
 import {
   createWorktree,
   removeWorktree,
@@ -65,6 +66,7 @@ export function loadConfig(partial?: Partial<EngineConfig>): EngineConfig {
     heartbeatMs: Number(process.env.JUBILEE_HEARTBEAT_MINUTES ?? 10) * 60_000,
     adversarialReview: (process.env.JUBILEE_ADVERSARIAL ?? "1") !== "0",
     requireReview: (process.env.JUBILEE_REQUIRE_REVIEW ?? "0") === "1",
+    gauntletRounds: Number(process.env.JUBILEE_GAUNTLET_ROUNDS ?? 3),
     ...partial,
   };
 }
@@ -157,15 +159,6 @@ function decisionOf(text: string): "approve" | "reject" | "unknown" {
   if (/\bREJECT\b/.test(t)) return "reject";
   if (/\bAPPROVE\b/.test(t)) return "approve";
   return "unknown";
-}
-
-function reviewPrompt(t: EngineTask, diff: string): string {
-  return [
-    "You are an independent, adversarial reviewer. Assume the change is wrong until proven otherwise.",
-    `Task: ${t.title}`,
-    `Diff:\n${diff.slice(0, 12000)}`,
-    "Your first line must be exactly one word: APPROVE or REJECT. Then list concrete issues if any.",
-  ].join("\n");
 }
 
 // ---------------------------------------------------------------------------
@@ -376,33 +369,28 @@ export class Engine {
       return;
     }
 
-    // -- VERIFY --
+    // -- VERIFY (pre-gate gauntlet: checks → security scan → red-team, until clear) --
+    let gauntletReport = "";
     {
       const t0 = Date.now();
       this.store.update(task.id, { status: "verifying" });
-      const results = await runChecks(worktree, this.config.checks);
-      const checksOk = allPassed(results);
-      this.record(task, "verify", checksOk ? "ok" : "fail", summarize(results), 0, t0);
-      if (!checksOk) {
-        this.store.update(task.id, { status: "failed", lastError: "checks failed" });
-        this.emit("task", `❌ Checks failed: ${summarize(results)}`, task.id);
+      const g = await runGauntlet({
+        worktree,
+        checks: this.config.checks,
+        runner: this.runner,
+        maxRounds: this.config.gauntletRounds,
+        readFiles: (rels) => readFileContext(worktree, rels),
+        extractPaths,
+        onEvent: (m) => this.emit("task", m, task.id),
+      });
+      gauntletReport = g.report;
+      this.record(task, "verify", g.ok ? "ok" : "fail", `gauntlet ${g.ok ? "clear" : "unresolved"} (${g.rounds} round(s))`, 0, t0);
+      if (!g.ok) {
+        this.store.update(task.id, { status: "failed", lastError: "gauntlet not clear" });
+        this.emit("task", "🛡️ Gauntlet NOT clear — not presenting.", task.id);
         return;
       }
-      if (this.config.adversarialReview) {
-        const t1 = Date.now();
-        const diff = await diffStat(worktree);
-        const res = await this.runner.run(reviewPrompt(task, diff), { cwd: worktree });
-        cost += res.costUsd;
-        const decision = decisionOf(res.text);
-        const blocking = this.config.requireReview && decision !== "approve";
-        this.record(task, "verify", blocking ? "fail" : "ok", `review ${decision}: ${res.text.slice(0, 220)}`, res.costUsd, t1);
-        this.emit("task", `🔎 Independent review: ${decision}${blocking ? " (blocking)" : ""}`, task.id);
-        if (blocking) {
-          this.store.update(task.id, { status: "failed", lastError: "adversarial review rejected" });
-          this.emit("task", "🛑 Adversarial review rejected.", task.id);
-          return;
-        }
-      }
+      this.emit("task", `🛡️ Gauntlet CLEAR after ${g.rounds} round(s).`, task.id);
     }
 
     // -- PACKAGE --
@@ -418,7 +406,7 @@ export class Engine {
         prUrl = await openPr(
           worktree,
           `[engine] ${task.title}`,
-          `Automated by Jubilee Engine (autonomy L${this.config.autonomyLevel}).\n\nCloses #${task.issueNumber ?? ""}\n\n- plan: ok\n- vet: APPROVE\n- verification: see CI on this PR\n`,
+          `Automated by Jubilee Engine (autonomy L${this.config.autonomyLevel}).\n\nCloses #${task.issueNumber ?? ""}\n\nVerified by the pre-gate gauntlet before reaching a human:\n\n${gauntletReport}\n`,
         );
       } else {
         // L0 propose-only: write the diff as a patch and let a human apply it.

@@ -59,6 +59,7 @@ jobs:
           JUBILEE_DAILY_BUDGET_USD: "2"
           JUBILEE_ADVERSARIAL: "1"
           JUBILEE_REQUIRE_REVIEW: "0"
+          JUBILEE_GAUNTLET_ROUNDS: "3"
           JUBILEE_RUNNER: ${{ vars.JUBILEE_RUNNER || 'ollama' }}
           JUBILEE_MODEL: ${{ vars.JUBILEE_MODEL || 'qwen2.5-coder:7b' }}
           OLLAMA_BASE_URL: http://127.0.0.1:11434
