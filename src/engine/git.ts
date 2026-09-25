@@ -87,3 +87,31 @@ export async function writePatch(cwd: string, outFile: string): Promise<string> 
   fs.writeFileSync(outFile, patch);
   return outFile;
 }
+
+/** Comment on an issue (used to surface held/gated work to a human). */
+export async function ghIssueComment(repo: string, num: number, body: string, cwd: string): Promise<void> {
+  await gh(["issue", "comment", String(num), "--repo", repo, "--body", body], cwd);
+}
+
+/** Add/remove labels on an issue. */
+export async function ghIssueLabels(
+  repo: string,
+  num: number,
+  add: string[],
+  remove: string[],
+  cwd: string,
+): Promise<void> {
+  const args = ["issue", "edit", String(num), "--repo", repo];
+  for (const l of add) args.push("--add-label", l);
+  for (const l of remove) args.push("--remove-label", l);
+  await gh(args, cwd);
+}
+
+/** Recent human comments on an issue — so feedback can shape the work. */
+export async function ghIssueComments(repo: string, num: number, cwd: string): Promise<string> {
+  try {
+    return await gh(["issue", "view", String(num), "--repo", repo, "--json", "comments", "--jq", ".comments[].body"], cwd);
+  } catch {
+    return "";
+  }
+}

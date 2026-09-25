@@ -27,6 +27,9 @@ import {
   writePatch,
   applyPatch,
   gh,
+  ghIssueComment,
+  ghIssueLabels,
+  ghIssueComments,
 } from "./git.js";
 import type { AutonomyLevel, EngineConfig, EngineEvent, EngineTask, VerifyCheck } from "./types.js";
 import { AUTONOMY_LABELS } from "./types.js";
@@ -75,12 +78,13 @@ export function loadConfig(partial?: Partial<EngineConfig>): EngineConfig {
 // Prompts
 // ---------------------------------------------------------------------------
 
-function planPrompt(t: EngineTask): string {
+function planPrompt(t: EngineTask, humanNotes = ""): string {
   return [
     "You are the planning stage of the Jubilee Engine (autonomy L" + ").",
     `Task: ${t.title}`,
     t.issueNumber ? `Issue: #${t.issueNumber}` : "",
     t.body ?? "",
+    humanNotes ? `\nHuman feedback (honour this):\n${humanNotes.slice(0, 3000)}` : "",
     "Produce a short, concrete implementation plan with exact files to touch and the acceptance test. No code yet.",
   ]
     .filter(Boolean)
@@ -243,30 +247,41 @@ export class Engine {
     }
   }
 
-  /** Pull `agent-ready` issues from GitHub into the queue. */
+  /** Pull `agent-ready` (and human-`approved`) issues from GitHub into the queue. */
   async syncIssues(label = "agent-ready"): Promise<number> {
-    const raw = await gh(
-      ["issue", "list", "--repo", this.config.repo, "--label", label, "--state", "open", "--json", "number,title,body,labels", "--limit", "50"],
-      this.config.repoRoot,
-    );
-    const issues = JSON.parse(raw) as Array<{ number: number; title: string; body: string; labels: { name: string }[] }>;
+    const fetch = async (lbl: string) =>
+      JSON.parse(
+        await gh(
+          ["issue", "list", "--repo", this.config.repo, "--label", lbl, "--state", "open", "--json", "number,title,body,labels", "--limit", "50"],
+          this.config.repoRoot,
+        ),
+      ) as Array<{ number: number; title: string; body: string; labels: { name: string }[] }>;
+
     let added = 0;
-    for (const issue of issues) {
-      const before = this.store.list().length;
-      this.store.enqueue({
-        source: "github",
-        repo: this.config.repo,
-        issueNumber: issue.number,
-        title: issue.title,
-        body: issue.body,
-        labels: issue.labels.map((l) => l.name),
-        requiredLevel: requiredLevelFor(issue.labels.map((l) => l.name)),
-        risk: riskFor(issue.labels.map((l) => l.name)),
-      });
-      if (this.store.list().length > before) added++;
-    }
-    this.emit("engine", `Synced ${issues.length} issue(s), ${added} new.`);
+    const ready = await fetch(label);
+    for (const issue of ready) added += this.enqueueIssue(issue, false);
+    // A human `approved` label is an explicit override of the level gate.
+    const approved = await fetch("approved");
+    for (const issue of approved) added += this.enqueueIssue(issue, true);
+
+    this.emit("engine", `Synced ${ready.length + approved.length} issue(s), ${added} new.`);
     return added;
+  }
+
+  private enqueueIssue(issue: { number: number; title: string; body: string; labels: { name: string }[] }, approved: boolean): number {
+    const labels = issue.labels.map((l) => l.name);
+    const before = this.store.list().length;
+    this.store.enqueue({
+      source: "github",
+      repo: this.config.repo,
+      issueNumber: issue.number,
+      title: issue.title,
+      body: issue.body,
+      labels,
+      requiredLevel: approved ? 0 : requiredLevelFor(labels),
+      risk: approved ? "low" : riskFor(labels),
+    });
+    return this.store.list().length > before ? 1 : 0;
   }
 
   // ---- the loop ----
@@ -274,13 +289,13 @@ export class Engine {
   private async processTask(task: EngineTask): Promise<void> {
     this.emit("task", `▶ #${task.issueNumber ?? task.id} ${task.title}`, task.id);
 
-    // -- Gate: autonomy + risk --
+    // -- Gate: autonomy + risk (held work is surfaced to the human on GitHub) --
     if (task.requiredLevel > this.config.autonomyLevel) {
-      this.block(task, `requires L${task.requiredLevel} > engine L${this.config.autonomyLevel}`);
+      await this.block(task, `requires L${task.requiredLevel} > engine L${this.config.autonomyLevel}`);
       return;
     }
     if (task.risk === "high" || task.requiredLevel >= 3) {
-      this.block(task, "high-risk / money-adjacent — human gate required");
+      await this.block(task, "high-risk / money-adjacent — human gate required");
       return;
     }
 
@@ -288,7 +303,11 @@ export class Engine {
     let plan = "";
     {
       const t0 = Date.now();
-      const res = await this.runner.run(planPrompt(task));
+      let humanNotes = "";
+      if (task.issueNumber) {
+        humanNotes = await ghIssueComments(this.config.repo, task.issueNumber, this.config.repoRoot);
+      }
+      const res = await this.runner.run(planPrompt(task, humanNotes));
       plan = res.text;
       this.record(task, "plan", "ok", plan.slice(0, 500), res.costUsd, t0);
       this.store.update(task.id, { status: "planned" });
@@ -451,9 +470,30 @@ export class Engine {
 
   // ---- helpers ----
 
-  private block(task: EngineTask, reason: string): void {
+  private async block(task: EngineTask, reason: string): Promise<void> {
     this.store.update(task.id, { status: "blocked", lastError: reason });
     this.emit("task", `⏸ Held for human: ${reason}`, task.id);
+    if (task.issueNumber) {
+      try {
+        await ghIssueLabels(this.config.repo, task.issueNumber, ["human-gate"], ["agent-ready"], this.config.repoRoot);
+        await ghIssueComment(
+          this.config.repo,
+          task.issueNumber,
+          [
+            `⏸ **Held for human review** — ${reason}.`,
+            "",
+            `Engine autonomy: **L${this.config.autonomyLevel}** · this task needs **L${task.requiredLevel}**.`,
+            "",
+            "**To approve:** add the `approved` label — the engine will then work it.",
+            "*(It still only opens a pull request; nothing is deployed or moved.)*",
+            "**To give instructions:** comment below — the engine reads recent comments.",
+          ].join("\n"),
+          this.config.repoRoot,
+        );
+      } catch (e: any) {
+        this.emit("task", `note: could not surface hold on issue #${task.issueNumber}: ${String(e?.message ?? e)}`, task.id);
+      }
+    }
   }
 
   private isKilled(): boolean {
