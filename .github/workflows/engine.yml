@@ -81,7 +81,7 @@ jobs:
           GH_TOKEN: ${{ secrets.JUBILEE_GH_TOKEN || github.token }}
           JUBILEE_REPO: ${{ github.repository }}
           JUBILEE_REPO_ROOT: ${{ github.workspace }}
-          JUBILEE_AUTONOMY_LEVEL: "1"
+          JUBILEE_AUTONOMY_LEVEL: "2"
           JUBILEE_DAILY_BUDGET_USD: "2"
           JUBILEE_ADVERSARIAL: "1"
           JUBILEE_REQUIRE_REVIEW: "0"

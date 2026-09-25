@@ -252,12 +252,16 @@ export class Engine {
   /** Pull `agent-ready` (and human-`approved`) issues from GitHub into the queue. */
   async syncIssues(label = "agent-ready"): Promise<number> {
     const fetch = async (lbl: string) =>
-      JSON.parse(
-        await gh(
-          ["issue", "list", "--repo", this.config.repo, "--label", lbl, "--state", "open", "--json", "number,title,body,labels", "--limit", "50"],
-          this.config.repoRoot,
-        ),
-      ) as Array<{ number: number; title: string; body: string; labels: { name: string }[] }>;
+      (
+        JSON.parse(
+          await gh(
+            ["issue", "list", "--repo", this.config.repo, "--label", lbl, "--state", "open", "--json", "number,title,body,labels,createdAt", "--limit", "50"],
+            this.config.repoRoot,
+          ),
+        ) as Array<{ number: number; title: string; body: string; labels: { name: string }[]; createdAt: string }>
+      )
+        // Oldest first, so the engine works the backlog in the order filed.
+        .sort((a, b) => a.createdAt.localeCompare(b.createdAt));
 
     let added = 0;
     const ready = await fetch(label);
