@@ -95,3 +95,7 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
         run: bun run src/engine/cli.ts sync && bun run src/engine/cli.ts run-once
+
+      - name: Fix model cache ownership
+        if: always()
+        run: sudo chown -R "$USER":"$USER" /tmp/ollama-models || true

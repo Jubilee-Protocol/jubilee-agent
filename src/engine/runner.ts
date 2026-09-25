@@ -93,21 +93,32 @@ export class StubRunner implements AgentRunner {
   }
 
   async run(prompt: string): Promise<RunResult> {
-    const res = await fetch(`${this.baseUrl}/api/chat`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        model: this.model,
-        stream: false,
-        options: { temperature: 0.2 },
-        messages: [{ role: "user", content: prompt }],
-      }),
-    });
-    if (!res.ok) {
-      throw new Error(`Ollama ${res.status}: ${(await res.text()).slice(0, 300)}`);
+    const timeoutMs = Number(process.env.JUBILEE_MODEL_TIMEOUT_MS ?? 300_000);
+    const ctrl = new AbortController();
+    const timer = setTimeout(() => ctrl.abort(), timeoutMs);
+    try {
+      const res = await fetch(`${this.baseUrl}/api/chat`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        signal: ctrl.signal,
+        body: JSON.stringify({
+          model: this.model,
+          stream: false,
+          options: { temperature: 0.2 },
+          messages: [{ role: "user", content: prompt }],
+        }),
+      });
+      if (!res.ok) {
+        throw new Error(`Ollama ${res.status}: ${(await res.text()).slice(0, 300)}`);
+      }
+      const json = (await res.json()) as any;
+      return { text: json?.message?.content ?? "", costUsd: 0 };
+    } catch (e: any) {
+      if (e?.name === "AbortError") throw new Error(`Ollama model call timed out after ${timeoutMs}ms`);
+      throw e;
+    } finally {
+      clearTimeout(timer);
     }
-    const json = (await res.json()) as any;
-    return { text: json?.message?.content ?? "", costUsd: 0 };
   }
 }
 

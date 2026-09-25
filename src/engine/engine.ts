@@ -434,6 +434,7 @@ export class Engine {
     } catch (e: any) {
       this.record(task, "execute", "fail", String(e?.message ?? e), cost, Date.now());
       this.store.update(task.id, { status: "failed", lastError: String(e?.message ?? e) });
+      this.emit("task", `⚠️ Execute failed: ${String(e?.message ?? e)}`, task.id);
       if (worktree) await removeWorktree(this.config.repoRoot, worktree);
       return;
     }
@@ -492,6 +493,7 @@ export class Engine {
     } catch (e: any) {
       this.record(task, "package", "fail", String(e?.message ?? e), 0, Date.now());
       this.store.update(task.id, { status: "failed", lastError: String(e?.message ?? e) });
+      this.emit("task", `⚠️ Package failed: ${String(e?.message ?? e)}`, task.id);
       return;
     } finally {
       await removeWorktree(this.config.repoRoot, worktree);
