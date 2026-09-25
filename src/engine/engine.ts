@@ -70,6 +70,7 @@ export function loadConfig(partial?: Partial<EngineConfig>): EngineConfig {
     adversarialReview: (process.env.JUBILEE_ADVERSARIAL ?? "1") !== "0",
     requireReview: (process.env.JUBILEE_REQUIRE_REVIEW ?? "0") === "1",
     gauntletRounds: Number(process.env.JUBILEE_GAUNTLET_ROUNDS ?? 3),
+    reviewIssue: process.env.JUBILEE_REVIEW_ISSUE ? Number(process.env.JUBILEE_REVIEW_ISSUE) : undefined,
     ...partial,
   };
 }
@@ -237,9 +238,10 @@ export class Engine {
       const task = this.store.claimNext("engine");
       if (!task) {
         this.emit("engine", "Queue empty — nominal.");
-        return;
+      } else {
+        await this.processTask(task);
       }
-      await this.processTask(task);
+      await this.refreshReviewIssue();
     } catch (err) {
       this.emit("engine", `Tick failed: ${String(err)}`);
     } finally {
@@ -282,6 +284,43 @@ export class Engine {
       risk: approved ? "low" : riskFor(labels),
     });
     return this.store.list().length > before ? 1 : 0;
+  }
+
+  /** Rewrite a pinned issue so one link shows everything needing a human. */
+  async updateReviewIssue(issueNumber: number): Promise<void> {
+    const byLabel = async (l: string) =>
+      JSON.parse(
+        await gh(["issue", "list", "--repo", this.config.repo, "--label", l, "--state", "open", "--json", "number,title", "--limit", "50"], this.config.repoRoot),
+      ) as Array<{ number: number; title: string }>;
+    const [queued, gated, review] = await Promise.all([byLabel("agent-ready"), byLabel("human-gate"), byLabel("engine:review")]);
+    const fmt = (xs: Array<{ number: number; title: string }>) =>
+      xs.length ? xs.map((i) => `- #${i.number} ${i.title}`).join("\n") : "_none_";
+    const body = [
+      "<!-- jubilee-engine:auto -->",
+      `_Auto-maintained by the Jubilee Engine · ${new Date().toISOString()} · autonomy L${this.config.autonomyLevel}_`,
+      "",
+      `### 🟣 Awaiting your review (human gate) — ${gated.length}`,
+      fmt(gated),
+      "",
+      `### 🟢 Engine PRs awaiting review — ${review.length}`,
+      fmt(review),
+      "",
+      `### 🔵 Queued (agent-ready) — ${queued.length}`,
+      fmt(queued),
+      "",
+      "**Approve** a gated item by adding the `approved` label. **Give instructions** by commenting on its issue.",
+      "The engine still only opens pull requests — nothing is deployed or moved.",
+    ].join("\n");
+    await gh(["issue", "edit", String(issueNumber), "--repo", this.config.repo, "--body", body], this.config.repoRoot);
+  }
+
+  private async refreshReviewIssue(): Promise<void> {
+    if (!this.config.reviewIssue) return;
+    try {
+      await this.updateReviewIssue(this.config.reviewIssue);
+    } catch (e: any) {
+      this.emit("engine", `note: could not refresh review issue: ${String(e?.message ?? e)}`);
+    }
   }
 
   // ---- the loop ----

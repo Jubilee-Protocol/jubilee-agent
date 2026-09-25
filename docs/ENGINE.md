@@ -84,6 +84,43 @@ deploy/engine/ # supervisors
 .github/workflows/engine.yml
 ```
 
+## Verification gauntlet (pre-gate)
+
+Nothing is presented for human gating until it survives, in order:
+
+1. **Checks** — typecheck, tests, lint (`JUBILEE_CHECKS`).
+2. **Security scan** — dependency audit (blocking on high/critical), plus
+   **Slither** and **Aderyn** when Solidity/Foundry is detected. Missing tools
+   report as skipped, never as a false pass.
+3. **Adversarial red-team** — a hostile pass hunting injection, auth bypass,
+   fund loss, reentrancy, precision bugs, SSRF, and secret leakage.
+4. **Loop until CLEAR** — on findings the engine remediates and re-runs, up to
+   `JUBILEE_GAUNTLET_ROUNDS` (default 3). **Unresolved work is not presented.**
+
+The gauntlet report is embedded in the PR body so a reviewer sees what was audited.
+
+Optional: `JUBILEE_GAUNTLET_REDTEAM=1` runs repo `scripts/redteam_*` scripts;
+`JUBILEE_GAUNTLET_EXTRA` adds custom scanners (`;;`-separated).
+
+## Human review & steering
+
+The GitHub issue tracker is the control surface:
+
+| Label | Meaning |
+|---|---|
+| `agent-ready` | queued for the engine |
+| `human-gate` | held — needs a human decision |
+| `approved` | human authorization; the engine proceeds (still PR-only) |
+| `engine:review` | work finished, PR open |
+
+When the engine holds an L3/L4 (or high-risk) task it **comments on the issue and
+relabels it `human-gate`** — so gated work persists and is reviewable even though
+the cloud queue is ephemeral. Approve by adding `approved`; give instructions by
+commenting (recent comments are injected into the plan stage).
+
+A pinned issue (`JUBILEE_REVIEW_ISSUE`) is auto-rewritten each tick to list
+everything gated, queued, and awaiting review.
+
 ## Roadmap
 
 1. Postgres-backed store (`tasks` + `engine_runs`) for multi-node.
