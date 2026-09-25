@@ -54,6 +54,23 @@ async function tryCmd(cmd: string, cwd: string): Promise<{ ok: boolean; out: str
   }
 }
 
+async function scanStage(name: string, cmd: string, cwd: string, maxChars = 800): Promise<GauntletStage> {
+  const r = await tryCmd(cmd, cwd);
+  if (r.missing) return { name, ok: true, skipped: true, detail: "tool not installed" };
+  return { name, ok: r.ok, detail: r.out.slice(0, maxChars) };
+}
+
+function repoRedteamScripts(cwd: string): string[] {
+  try {
+    return fs
+      .readdirSync(path.join(cwd, "scripts"))
+      .filter((f) => /^redteam_.*\.(ts|js|sh)$/.test(f))
+      .map((f) => `scripts/${f}`);
+  } catch {
+    return [];
+  }
+}
+
 /** Auto-detected scanners. A missing tool is 'skipped', not a failure. */
 export async function securityScan(cwd: string): Promise<GauntletStage[]> {
   const stages: GauntletStage[] = [];
@@ -64,13 +81,30 @@ export async function securityScan(cwd: string): Promise<GauntletStage[]> {
     fs.existsSync(path.join(cwd, "hardhat.config.js"));
 
   if (hasPkg) {
-    const r = await tryCmd("bun audit 2>/dev/null || npm audit --audit-level=high 2>/dev/null || true", cwd);
-    stages.push({ name: "deps-audit", ok: r.ok || r.missing, skipped: r.missing, detail: r.out.slice(0, 600) });
+    // Blocking: high/critical dependency findings must be resolved before presenting.
+    stages.push(await scanStage("deps-audit", "bun audit 2>/dev/null || npm audit --audit-level=high 2>/dev/null", cwd, 600));
   }
   if (hasSol) {
-    const r = await tryCmd("slither . --ignore-compile || true", cwd);
-    stages.push({ name: "slither", ok: r.ok || r.missing, skipped: r.missing, detail: r.out.slice(0, 800) });
+    stages.push(await scanStage("slither", "slither . --ignore-compile", cwd, 1200));
+    stages.push(await scanStage("aderyn", "aderyn .", cwd, 1200));
   }
+
+  // Repo-local adversarial scripts (opt-in — they may need a running local stack).
+  if ((process.env.JUBILEE_GAUNTLET_REDTEAM ?? "0") === "1") {
+    for (const s of repoRedteamScripts(cwd)) {
+      stages.push(await scanStage(`redteam:${path.basename(s)}`, `bun run ${s}`, cwd));
+    }
+  }
+
+  // Operator-supplied extra scanners, separated by ';;'.
+  const extra = (process.env.JUBILEE_GAUNTLET_EXTRA ?? "")
+    .split(";;")
+    .map((s) => s.trim())
+    .filter(Boolean);
+  for (const [i, cmd] of extra.entries()) {
+    stages.push(await scanStage(`extra:${i + 1}`, cmd, cwd));
+  }
+
   return stages;
 }
 

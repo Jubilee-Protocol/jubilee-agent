@@ -50,6 +50,17 @@ jobs:
           for i in $(seq 1 30); do curl -sf http://127.0.0.1:11434/api/version >/dev/null && break; sleep 2; done
           docker exec ollama ollama pull qwen2.5-coder:7b
 
+      - name: Install contract analyzers (best effort)
+        continue-on-error: true
+        run: |
+          python3 -m pip install --quiet --user pipx || true
+          python3 -m pipx install slither-analyzer --quiet 2>/dev/null || python3 -m pip install --quiet --user slither-analyzer || true
+          python3 -m pip install --quiet --user solc-select || true
+          solc-select install 0.8.24 2>/dev/null || true
+          solc-select use 0.8.24 2>/dev/null || true
+          python3 -m pip install --quiet --user aderyn 2>/dev/null || true
+          echo "$HOME/.local/bin" >> "$GITHUB_PATH"
+
       - name: Run one engine tick
         env:
           GH_TOKEN: ${{ secrets.JUBILEE_GH_TOKEN || github.token }}
