@@ -90,7 +90,7 @@ function vetPrompt(t: EngineTask): string {
     `Task: ${t.title}`,
     t.body ?? "",
     "Decide whether this task is safe to perform autonomously without touching money, keys, mainnet deploys, or treasury.",
-    "Reply on the first line with exactly APPROVE or REJECT, then one sentence of reasoning.",
+    "Your first line must be exactly one word: APPROVE or REJECT. Then one sentence of reasoning.",
   ]
     .filter(Boolean)
     .join("\n");
@@ -116,12 +116,29 @@ function extractDiff(text: string): string {
   return /^diff --git |^--- |^\+\+\+ /m.test(body) ? body + "\n" : "";
 }
 
+/**
+ * Parse a model decision defensively. Small models rarely obey a strict
+ * "first line must be APPROVE" format, so we accept the token anywhere,
+ * preferring the first line, and fail safe (reject) when ambiguous.
+ */
+function decisionOf(text: string): "approve" | "reject" | "unknown" {
+  const firstLine = (text.trim().split("\n")[0] ?? "").toUpperCase();
+  const hasA = /\bAPPROVE\b/.test(firstLine);
+  const hasR = /\bREJECT\b/.test(firstLine);
+  if (hasA && !hasR) return "approve";
+  if (hasR) return "reject";
+  const t = text.toUpperCase();
+  if (/\bREJECT\b/.test(t)) return "reject";
+  if (/\bAPPROVE\b/.test(t)) return "approve";
+  return "unknown";
+}
+
 function reviewPrompt(t: EngineTask, diff: string): string {
   return [
     "You are an independent, adversarial reviewer. Assume the change is wrong until proven otherwise.",
     `Task: ${t.title}`,
     `Diff:\n${diff.slice(0, 12000)}`,
-    "Reply on the first line with exactly APPROVE or REJECT, then list concrete issues if any.",
+    "Your first line must be exactly one word: APPROVE or REJECT. Then list concrete issues if any.",
   ].join("\n");
 }
 
@@ -263,7 +280,7 @@ export class Engine {
     {
       const t0 = Date.now();
       const res = await this.runner.run(vetPrompt(task));
-      const approved = /^\s*APPROVE/i.test(res.text);
+      const approved = decisionOf(res.text) === "approve";
       this.record(task, "vet", approved ? "ok" : "fail", res.text.slice(0, 300), res.costUsd, t0);
       if (!approved) {
         this.store.update(task.id, { status: "vetoed", lastError: "Prophet rejected" });
@@ -345,7 +362,7 @@ export class Engine {
         const diff = await diffStat(worktree);
         const res = await this.runner.run(reviewPrompt(task, diff), { cwd: worktree });
         cost += res.costUsd;
-        const approved = /^\s*APPROVE/i.test(res.text);
+        const approved = decisionOf(res.text) === "approve";
         this.record(task, "verify", approved ? "ok" : "fail", `review: ${res.text.slice(0, 300)}`, res.costUsd, t1);
         if (!approved) {
           this.store.update(task.id, { status: "failed", lastError: "adversarial review rejected" });
