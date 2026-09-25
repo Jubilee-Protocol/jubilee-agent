@@ -115,3 +115,19 @@ export async function ghIssueComments(repo: string, num: number, cwd: string): P
     return "";
   }
 }
+
+/** Ensure a local clone of `repo` exists at `dir` (multi-repo mode). */
+export async function ensureClone(repo: string, dir: string, cwd: string): Promise<string> {
+  if (fs.existsSync(path.join(dir, ".git"))) {
+    try {
+      await git(["fetch", "--prune", "origin"], dir);
+      await git(["checkout", "--force", "origin/HEAD"], dir);
+    } catch {
+      /* offline is fine — work from whatever we have */
+    }
+    return dir;
+  }
+  fs.mkdirSync(path.dirname(dir), { recursive: true });
+  await gh(["repo", "clone", repo, dir], cwd);
+  return dir;
+}

@@ -50,7 +50,8 @@ async function main(): Promise<void> {
       return;
     }
     case "run-once": {
-      await engine.tick();
+      const { runMulti } = await import("./multi.js");
+      await runMulti(log);
       return;
     }
     case "start": {
