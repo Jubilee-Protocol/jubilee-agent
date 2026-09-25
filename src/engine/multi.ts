@@ -47,6 +47,8 @@ export async function runMulti(
       }
       const perRepo = process.env[`JUBILEE_CHECKS_${slug.toUpperCase()}`];
       if (perRepo) cfg = { ...cfg, checks: parseChecks(perRepo) };
+      const perRepoSetup = process.env[`JUBILEE_SETUP_${slug.toUpperCase()}`];
+      if (perRepoSetup) cfg = { ...cfg, setupCommand: perRepoSetup };
 
       onEvent({
         type: "engine",

@@ -103,6 +103,8 @@ export interface EngineConfig {
   gauntletRounds: number;
   /** Optional pinned issue number the engine keeps current as a review queue. */
   reviewIssue?: number;
+  /** Optional per-repo setup command run in the worktree before checks (e.g. `bun install`). */
+  setupCommand?: string;
   /** Local path to the working clone used as the worktree base. */
   repoRoot: string;
 }
