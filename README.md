@@ -10,6 +10,8 @@
 
 ## ⚡ Quick Start (3 minutes)
 
+> **Want it to build itself?** See [The Jubilee Engine](#-the-jubilee-engine-24-7-builder) below — a 24/7 cloud loop that plans, verifies, and opens PRs.
+
 ```bash
 # 1. Clone
 git clone https://github.com/Jubilee-Protocol/jubilee-agent.git
@@ -49,6 +51,18 @@ It runs **all-cloud** on GitHub Actions — no local machine required.
 checks (typecheck/test/lint) → security scan (deps audit, Slither, Aderyn) →
 adversarial red-team — looping with automated remediation until **CLEAR**.
 Unresolved work is never presented; the gauntlet report is in the PR body.
+
+```mermaid
+flowchart LR
+  I[agent-ready issue] --> Q[Durable queue]
+  Q --> P[Plan] --> V[Vet] --> X[Execute<br/>isolated worktree]
+  X --> G[Gauntlet<br/>checks · scan · red-team]
+  G -->|findings| R[Remediate] --> G
+  G -->|CLEAR| PR[Pull request + report]
+  PR --> H{Human gate}
+  H -->|approved| M[Merge]
+  H -->|comment| R
+```
 
 ### Autonomy levels
 
@@ -386,7 +400,10 @@ jubilee-agent/
 │   │   ├── governance-tools.ts # Safe + Squads multi-sig
 │   │   └── registry.ts         # Tool registration + mode gating
 │   ├── sprint-runner.ts # Standalone sprint CLI
+│   ├── engine/          # 24/7 build loop: queue, gauntlet, human gate (docs/ENGINE.md)
 │   └── utils/           # Logger, helpers
+├── .github/workflows/  # CI + the Engine's cloud loop (engine.yml)
+├── docs/ENGINE.md      # Engine design: loop, gauntlet, autonomy levels, review
 ├── AGENT_MAP.md            # Department → Angel → MCP routing
 ├── mcp.json                # MCP server configuration (6 servers)
 ├── docker-compose.yml      # Full stack deployment
