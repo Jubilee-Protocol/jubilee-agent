@@ -39,12 +39,14 @@ jobs:
         run: bun install
 
       - name: Cache Ollama model
+        if: ${{ (vars.JUBILEE_RUNNER || 'ollama') == 'ollama' }}
         uses: actions/cache@v4
         with:
           path: /tmp/ollama-models
           key: ollama-${{ vars.JUBILEE_MODEL || 'qwen2.5-coder:3b' }}
 
       - name: Start local model (Ollama — free, no API key)
+        if: ${{ (vars.JUBILEE_RUNNER || 'ollama') == 'ollama' }}
         run: |
           docker run -d --name ollama -p 11434:11434 -v /tmp/ollama-models:/root/.ollama ollama/ollama:latest
           for i in $(seq 1 30); do curl -sf http://127.0.0.1:11434/api/version >/dev/null && break; sleep 2; done
@@ -99,5 +101,5 @@ jobs:
         run: bun run src/engine/cli.ts sync && bun run src/engine/cli.ts run-once
 
       - name: Fix model cache ownership
-        if: always()
+        if: ${{ always() && (vars.JUBILEE_RUNNER || 'ollama') == 'ollama' }}
         run: sudo chown -R "$USER":"$USER" /tmp/ollama-models || true
