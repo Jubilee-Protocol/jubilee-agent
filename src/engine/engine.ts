@@ -71,6 +71,7 @@ export function loadConfig(partial?: Partial<EngineConfig>): EngineConfig {
     requireReview: (process.env.JUBILEE_REQUIRE_REVIEW ?? "0") === "1",
     gauntletRounds: Number(process.env.JUBILEE_GAUNTLET_ROUNDS ?? 3),
     reviewIssue: process.env.JUBILEE_REVIEW_ISSUE ? Number(process.env.JUBILEE_REVIEW_ISSUE) : undefined,
+    setupCommand: process.env.JUBILEE_SETUP || undefined,
     ...partial,
   };
 }
@@ -381,6 +382,12 @@ export class Engine {
     try {
       worktree = await createWorktree(this.config.repoRoot, branch, this.config.workRoot);
       this.store.update(task.id, { status: "executing", branch });
+
+      // Per-repo bootstrap (e.g. install deps) before the change is made.
+      if (this.config.setupCommand) {
+        this.emit("task", `⚙️ setup: ${this.config.setupCommand}`, task.id);
+        await runChecks(worktree, [{ name: "setup", cmd: this.config.setupCommand }], 20 * 60_000);
+      }
 
       const t0 = Date.now();
       if (task.artifacts?.executeCommand) {

@@ -87,6 +87,7 @@ jobs:
           JUBILEE_REQUIRE_REVIEW: "0"
           JUBILEE_GAUNTLET_ROUNDS: "3"
           JUBILEE_REVIEW_ISSUE: ${{ vars.JUBILEE_REVIEW_ISSUE }}
+          JUBILEE_REPOS: ${{ vars.JUBILEE_REPOS }}
           JUBILEE_RUNNER: ${{ vars.JUBILEE_RUNNER || 'ollama' }}
           JUBILEE_MODEL: ${{ vars.JUBILEE_MODEL || 'qwen2.5-coder:3b' }}
           OLLAMA_BASE_URL: http://127.0.0.1:11434
