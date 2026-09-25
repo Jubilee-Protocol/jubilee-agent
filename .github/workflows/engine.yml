@@ -91,6 +91,8 @@ jobs:
           JUBILEE_RUNNER: ${{ vars.JUBILEE_RUNNER || 'ollama' }}
           JUBILEE_MODEL: ${{ vars.JUBILEE_MODEL || 'qwen2.5-coder:3b' }}
           OLLAMA_BASE_URL: http://127.0.0.1:11434
+          OPENAI_BASE_URL: ${{ vars.OPENAI_BASE_URL }}
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
           JUBILEE_CHECKS: "typecheck=bun run typecheck; test=bun test"
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
