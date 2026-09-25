@@ -38,9 +38,15 @@ jobs:
       - name: Install dependencies
         run: bun install
 
+      - name: Cache Ollama model
+        uses: actions/cache@v4
+        with:
+          path: /tmp/ollama-models
+          key: ollama-qwen2.5-coder-3b
+
       - name: Start local model (Ollama — free, no API key)
         run: |
-          docker run -d --name ollama -p 11434:11434 ollama/ollama:latest
+          docker run -d --name ollama -p 11434:11434 -v /tmp/ollama-models:/root/.ollama ollama/ollama:latest
           for i in $(seq 1 30); do curl -sf http://127.0.0.1:11434/api/version >/dev/null && break; sleep 2; done
           docker exec ollama ollama pull qwen2.5-coder:3b
 
@@ -52,6 +58,7 @@ jobs:
           JUBILEE_AUTONOMY_LEVEL: "1"
           JUBILEE_DAILY_BUDGET_USD: "2"
           JUBILEE_ADVERSARIAL: "1"
+          JUBILEE_REQUIRE_REVIEW: "0"
           JUBILEE_RUNNER: ${{ vars.JUBILEE_RUNNER || 'ollama' }}
           JUBILEE_MODEL: ${{ vars.JUBILEE_MODEL || 'qwen2.5-coder:3b' }}
           OLLAMA_BASE_URL: http://127.0.0.1:11434

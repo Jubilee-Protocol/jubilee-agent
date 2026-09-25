@@ -64,6 +64,7 @@ export function loadConfig(partial?: Partial<EngineConfig>): EngineConfig {
     statePath: process.env.JUBILEE_ENGINE_STATE ?? path.join(home, "engine", "state.json"),
     heartbeatMs: Number(process.env.JUBILEE_HEARTBEAT_MINUTES ?? 10) * 60_000,
     adversarialReview: (process.env.JUBILEE_ADVERSARIAL ?? "1") !== "0",
+    requireReview: (process.env.JUBILEE_REQUIRE_REVIEW ?? "0") === "1",
     ...partial,
   };
 }
@@ -280,9 +281,13 @@ export class Engine {
     {
       const t0 = Date.now();
       const res = await this.runner.run(vetPrompt(task));
-      const approved = decisionOf(res.text) === "approve";
-      this.record(task, "vet", approved ? "ok" : "fail", res.text.slice(0, 300), res.costUsd, t0);
-      if (!approved) {
+      const decision = decisionOf(res.text);
+      // Model vetting is advisory unless JUBILEE_REQUIRE_REVIEW=1. The hard
+      // gates are the level/risk check above and the verification checks below.
+      const blocking = this.config.requireReview && decision !== "approve";
+      this.record(task, "vet", blocking ? "fail" : "ok", `${decision}: ${res.text.slice(0, 220)}`, res.costUsd, t0);
+      this.emit("task", `🧭 Prophet: ${decision}${blocking ? " (blocking)" : " (advisory)"}`, task.id);
+      if (blocking) {
         this.store.update(task.id, { status: "vetoed", lastError: "Prophet rejected" });
         this.emit("task", "🛑 Vetoed by Prophet.", task.id);
         return;
@@ -362,9 +367,11 @@ export class Engine {
         const diff = await diffStat(worktree);
         const res = await this.runner.run(reviewPrompt(task, diff), { cwd: worktree });
         cost += res.costUsd;
-        const approved = decisionOf(res.text) === "approve";
-        this.record(task, "verify", approved ? "ok" : "fail", `review: ${res.text.slice(0, 300)}`, res.costUsd, t1);
-        if (!approved) {
+        const decision = decisionOf(res.text);
+        const blocking = this.config.requireReview && decision !== "approve";
+        this.record(task, "verify", blocking ? "fail" : "ok", `review ${decision}: ${res.text.slice(0, 220)}`, res.costUsd, t1);
+        this.emit("task", `🔎 Independent review: ${decision}${blocking ? " (blocking)" : ""}`, task.id);
+        if (blocking) {
           this.store.update(task.id, { status: "failed", lastError: "adversarial review rejected" });
           this.emit("task", "🛑 Adversarial review rejected.", task.id);
           return;
