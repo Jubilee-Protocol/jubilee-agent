@@ -159,11 +159,62 @@ export class GitHubModelsRunner implements AgentRunner {
   }
 }
 
+/**
+ * Any OpenAI-compatible hosted endpoint (Groq, Gemini's OpenAI shim, Together,
+ * OpenAI, …). Fast enough for real code generation where CPU inference is not.
+ * Configure with OPENAI_BASE_URL + OPENAI_API_KEY (or reuse OPENROUTER_API_KEY).
+ */
+export class OpenAICompatRunner implements AgentRunner {
+  private readonly model: string;
+  private readonly baseUrl: string;
+  private readonly key: string;
+
+  constructor(
+    model = process.env.JUBILEE_MODEL ?? "llama-3.3-70b-versatile",
+    baseUrl = process.env.OPENAI_BASE_URL ?? "https://api.groq.com/openai/v1",
+    key = process.env.OPENAI_API_KEY ?? "",
+  ) {
+    this.model = model;
+    this.baseUrl = baseUrl.replace(/\/$/, "");
+    this.key = key;
+  }
+
+  async run(prompt: string): Promise<RunResult> {
+    if (!this.key) throw new Error("OPENAI_API_KEY is not set (needed for the hosted runner)");
+    const timeoutMs = Number(process.env.JUBILEE_MODEL_TIMEOUT_MS ?? 180_000);
+    const ctrl = new AbortController();
+    const timer = setTimeout(() => ctrl.abort(), timeoutMs);
+    try {
+      const res = await fetch(`${this.baseUrl}/chat/completions`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${this.key}` },
+        signal: ctrl.signal,
+        body: JSON.stringify({
+          model: this.model,
+          temperature: 0.2,
+          messages: [{ role: "user", content: prompt }],
+        }),
+      });
+      if (!res.ok) throw new Error(`Hosted model ${res.status}: ${(await res.text()).slice(0, 300)}`);
+      const json = (await res.json()) as any;
+      return { text: json?.choices?.[0]?.message?.content ?? "", costUsd: 0 };
+    } catch (e: any) {
+      if (e?.name === "AbortError") throw new Error(`Hosted model call timed out after ${timeoutMs}ms`);
+      throw e;
+    } finally {
+      clearTimeout(timer);
+    }
+  }
+}
+
 export function defaultRunner(): AgentRunner {
   const kind = process.env.JUBILEE_RUNNER ?? "triune";
   if (kind === "stub") return new StubRunner();
   if (kind === "ollama") return new OllamaRunner();
   if (kind === "github-models" || kind === "github") return new GitHubModelsRunner();
+  if (kind === "openai-compatible" || kind === "hosted" || kind === "groq" || kind === "gemini") {
+    return new OpenAICompatRunner();
+  }
   if (kind === "openrouter") return new OpenRouterRunner();
   return new TriuneRunner(Number(process.env.JUBILEE_COST_PER_CALL_USD ?? 0));
 }
