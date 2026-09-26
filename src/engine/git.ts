@@ -25,8 +25,14 @@ export async function gh(args: string[], cwd: string): Promise<string> {
 
 /** Create an isolated worktree on a fresh branch from HEAD. Returns its path. */
 export async function createWorktree(repoRoot: string, branch: string, workRoot: string): Promise<string> {
-  fs.mkdirSync(workRoot, { recursive: true });
-  const dir = path.join(workRoot, branch.replace(/[^a-zA-Z0-9._-]/g, "-"));
+  // Key the worktree by repo AND branch: with a shared work root, one repo's
+  // "engine-<n>" collides with another's (fatal: '... already exists').
+  const repoSlug = path.basename(repoRoot).replace(/[^a-zA-Z0-9._-]/g, "-");
+  const dir = path.join(workRoot, repoSlug, branch.replace(/[^a-zA-Z0-9._-]/g, "-"));
+  // Clear any stale worktree left by a previous failed tick, then re-add.
+  await removeWorktree(repoRoot, dir);
+  await git(["worktree", "prune"], repoRoot).catch(() => "");
+  fs.mkdirSync(path.dirname(dir), { recursive: true });
   await git(["worktree", "add", "-B", branch, dir, "HEAD"], repoRoot);
   return dir;
 }
