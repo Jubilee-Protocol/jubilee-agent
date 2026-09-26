@@ -181,6 +181,7 @@ export async function runGauntlet(opts: {
     const results = await runChecks(worktree, checks);
     const checksOk = allPassed(results);
     stages.push({ name: `checks(r${round})`, ok: checksOk, detail: summarize(results) });
+    if (!checksOk) opts.onEvent?.(`❌ checks failed: ${summarize(results).replace(/\s+/g, " ").slice(0, 600)}`);
 
     const files = await changedFiles(worktree);
     const codeTouched = files.some((f) => CODE_RE.test(f));
@@ -189,6 +190,9 @@ export async function runGauntlet(opts: {
     const scans = await securityScan(worktree, { depsChanged });
     stages.push(...scans);
     const scanOk = scans.every((s) => s.ok);
+    for (const s of scans) {
+      if (!s.ok) opts.onEvent?.(`❌ ${s.name}: ${s.detail.replace(/\s+/g, " ").slice(0, 400)}`);
+    }
 
     let redClear = true;
     if (!codeTouched) {
