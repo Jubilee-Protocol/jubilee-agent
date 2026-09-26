@@ -25,6 +25,16 @@ export function slugFor(repo: string): string {
   return repo.replace(/[^a-zA-Z0-9]+/g, "__");
 }
 
+/** Per-repo config from the JUBILEE_REPO_CONFIG JSON var: {"owner/name": {"checks": "...", "setup": "..."}}. */
+function repoConfig(repo: string): { checks?: string; setup?: string } {
+  try {
+    const all = JSON.parse(process.env.JUBILEE_REPO_CONFIG ?? "{}") as Record<string, any>;
+    return all[repo] ?? {};
+  } catch {
+    return {};
+  }
+}
+
 /**
  * Run one tick against each configured repo. Never throws: a repo that fails is
  * reported and the loop moves on, so one broken target can't stop the others.
@@ -40,14 +50,17 @@ export async function runMulti(
     const slug = slugFor(repo);
     try {
       let cfg: EngineConfig = { ...base, repo };
+      const rc = repoConfig(repo);
+      // Isolate state per repo, or one repo's queue leaks into another's tick.
+      cfg = { ...cfg, statePath: path.join(base.workRoot, "state", `${slug}.json`) };
       if (repo !== base.repo) {
         const dir = path.join(base.workRoot, "repos", slug);
         await ensureClone(repo, dir, base.repoRoot);
         cfg = { ...cfg, repoRoot: dir };
       }
-      const perRepo = process.env[`JUBILEE_CHECKS_${slug.toUpperCase()}`];
+      const perRepo = process.env[`JUBILEE_CHECKS_${slug.toUpperCase()}`] ?? rc.checks;
       if (perRepo) cfg = { ...cfg, checks: parseChecks(perRepo) };
-      const perRepoSetup = process.env[`JUBILEE_SETUP_${slug.toUpperCase()}`];
+      const perRepoSetup = process.env[`JUBILEE_SETUP_${slug.toUpperCase()}`] ?? rc.setup;
       if (perRepoSetup) cfg = { ...cfg, setupCommand: perRepoSetup };
 
       onEvent({

@@ -90,6 +90,7 @@ jobs:
           JUBILEE_GAUNTLET_ROUNDS: "3"
           JUBILEE_REVIEW_ISSUE: ${{ vars.JUBILEE_REVIEW_ISSUE }}
           JUBILEE_REPOS: ${{ vars.JUBILEE_REPOS }}
+          JUBILEE_REPO_CONFIG: ${{ vars.JUBILEE_REPO_CONFIG }}
           JUBILEE_RUNNER: ${{ vars.JUBILEE_RUNNER || 'ollama' }}
           JUBILEE_MODEL: ${{ vars.JUBILEE_MODEL || 'qwen2.5-coder:3b' }}
           JUBILEE_EXEC_RUNNER: ${{ vars.JUBILEE_EXEC_RUNNER }}

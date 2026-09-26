@@ -370,8 +370,8 @@ export class Engine {
     if (!this.config.reviewIssue) return;
     try {
       await this.updateReviewIssue(this.config.reviewIssue);
-    } catch (e: any) {
-      this.emit("engine", `note: could not refresh review issue: ${String(e?.message ?? e)}`);
+    } catch {
+      /* the review issue may not exist in every multi-repo target — non-fatal */
     }
   }
 
