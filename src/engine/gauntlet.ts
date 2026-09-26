@@ -18,6 +18,7 @@ import * as path from "node:path";
 import type { AgentRunner } from "./runner.js";
 import { runChecks, allPassed, summarize } from "./verify.js";
 import { applyPatch, diffStat } from "./git.js";
+import { parseEdits, applyEdits } from "./edits.js";
 import type { VerifyCheck } from "./types.js";
 
 const run = promisify(execFile);
@@ -121,10 +122,17 @@ function redTeamPrompt(diff: string): string {
 
 function fixPrompt(findings: string, fileContext: string): string {
   return [
-    "A verification pass found issues. Produce a unified diff that fixes ALL of them.",
+    "A verification pass found issues. Fix ALL of them.",
     `Findings:\n${findings.slice(0, 6000)}`,
     fileContext ? `\nCurrent file contents (authoritative):\n${fileContext}` : "",
-    "Return ONLY a unified diff in git-apply format inside a ```diff block. Do not touch secrets or deploys.",
+    "Return the fix as Aider-style edit blocks:",
+    "path/to/file",
+    "<<<<<<< SEARCH",
+    "<exact existing lines, copied verbatim>",
+    "=======",
+    "<replacement lines>",
+    ">>>>>>> REPLACE",
+    "(A unified diff is also accepted.) Do not touch secrets or deploys.",
   ].join("\n");
 }
 
@@ -168,19 +176,30 @@ export async function runGauntlet(opts: {
     const ctx = opts.readFiles && opts.extractPaths ? opts.readFiles(opts.extractPaths(findings)) : "";
     const fixRes = await runner.run(fixPrompt(findings, ctx), { cwd: worktree });
     const patch = extractDiff(fixRes.text);
+    let remediated = false;
     if (patch) {
       const pf = path.join(worktree, ".gauntlet.patch");
       fs.writeFileSync(pf, patch);
       try {
         await applyPatch(worktree, pf);
+        remediated = true;
         opts.onEvent?.("🔧 Applied remediation diff; re-verifying.");
       } catch {
         opts.onEvent?.("⚠️ Remediation diff did not apply.");
       }
       fs.rmSync(pf, { force: true });
-    } else {
-      opts.onEvent?.("⚠️ No remediation diff produced.");
     }
+    if (!remediated) {
+      const edits = parseEdits(fixRes.text);
+      if (edits.length) {
+        const r = applyEdits(worktree, edits);
+        if (r.applied > 0) {
+          remediated = true;
+          opts.onEvent?.("🔧 Applied remediation edits; re-verifying.");
+        }
+      }
+    }
+    if (!remediated) opts.onEvent?.("⚠️ No remediation applied.");
   }
 
   const report = [

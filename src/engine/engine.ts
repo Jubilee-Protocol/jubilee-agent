@@ -575,7 +575,7 @@ export class Engine {
       const g = await runGauntlet({
         worktree,
         checks: this.config.checks,
-        runner: this.runner,
+        runner: this.execRunner,
         maxRounds: this.config.gauntletRounds,
         readFiles: (rels) => readFileContext(worktree, rels),
         extractPaths,
