@@ -19,10 +19,29 @@ import type { AgentRunner } from "./runner.js";
 import { runChecks, allPassed, summarize } from "./verify.js";
 import { applyPatch, diffStat } from "./git.js";
 import { parseEdits, applyEdits } from "./edits.js";
+import { systemOne } from "./decision.js";
 import type { VerifyCheck } from "./types.js";
 
 const run = promisify(execFile);
 const MAXBUF = 32 * 1024 * 1024;
+
+/** Files changed in the worktree vs HEAD. */
+async function changedFiles(cwd: string): Promise<string[]> {
+  try {
+    const { stdout } = await run("git", ["diff", "--name-only", "HEAD"], { cwd, maxBuffer: MAXBUF });
+    return stdout
+      .split("\n")
+      .map((s) => s.trim())
+      .filter(Boolean);
+  } catch {
+    return [];
+  }
+}
+
+/** Executable code (what a red-team can actually exploit), vs docs/config. */
+const CODE_RE = /\.(ts|tsx|js|jsx|mjs|cjs|py|go|rs|sol|sh|rb|java|kt|swift|php|cs)$/;
+/** Dependency manifests — only changes to these make a dependency audit blocking. */
+const DEPS_RE = /(^|\/)(package\.json|bun\.lockb?|package-lock\.json|yarn\.lock|pnpm-lock\.yaml)$/;
 
 export interface GauntletStage {
   name: string;
@@ -73,7 +92,7 @@ function repoRedteamScripts(cwd: string): string[] {
 }
 
 /** Auto-detected scanners. A missing tool is 'skipped', not a failure. */
-export async function securityScan(cwd: string): Promise<GauntletStage[]> {
+export async function securityScan(cwd: string, opts: { depsChanged?: boolean } = {}): Promise<GauntletStage[]> {
   const stages: GauntletStage[] = [];
   const hasPkg = fs.existsSync(path.join(cwd, "package.json"));
   const hasSol =
@@ -82,8 +101,13 @@ export async function securityScan(cwd: string): Promise<GauntletStage[]> {
     fs.existsSync(path.join(cwd, "hardhat.config.js"));
 
   if (hasPkg) {
-    // Blocking: high/critical dependency findings must be resolved before presenting.
-    stages.push(await scanStage("deps-audit", "bun audit 2>/dev/null || npm audit --audit-level=high 2>/dev/null", cwd, 600));
+    // Blocking ONLY when the change itself touches dependencies; otherwise the
+    // repo's pre-existing advisories would block every unrelated task forever.
+    if (opts.depsChanged) {
+      stages.push(await scanStage("deps-audit", "bun audit 2>/dev/null || npm audit --audit-level=high 2>/dev/null", cwd, 600));
+    } else {
+      stages.push({ name: "deps-audit", ok: true, skipped: true, detail: "change does not touch dependencies" });
+    }
   }
   if (hasSol) {
     stages.push(await scanStage("slither", "slither . --ignore-compile", cwd, 1200));
@@ -109,14 +133,13 @@ export async function securityScan(cwd: string): Promise<GauntletStage[]> {
   return stages;
 }
 
-function redTeamPrompt(diff: string): string {
+function redTeamState(diff: string): string {
   return [
-    "You are a hostile red-team auditor. Assume this change is malicious or buggy.",
-    "Hunt for concrete, exploitable issues: injection, auth bypass, fund loss, reentrancy,",
-    "integer/precision bugs, SSRF, secret leakage, unsafe deserialization, prompt-injection surfaces.",
+    "HOSTILE RED-TEAM REVIEW",
+    "Assume this diff is malicious or buggy. Look for a CONCRETE, exploitable defect:",
+    "injection, auth bypass, fund loss, reentrancy, precision bugs, SSRF, secret leakage, unsafe deserialization.",
+    "Pre-existing repo issues, style, and speculation are NOT findings.",
     `Diff:\n${diff.slice(0, 12000)}`,
-    "If you find NO exploitable issue, reply with exactly: CLEAR",
-    "Otherwise reply with FINDINGS followed by a numbered list. Be specific about impact.",
   ].join("\n");
 }
 
@@ -159,14 +182,30 @@ export async function runGauntlet(opts: {
     const checksOk = allPassed(results);
     stages.push({ name: `checks(r${round})`, ok: checksOk, detail: summarize(results) });
 
-    const scans = await securityScan(worktree);
+    const files = await changedFiles(worktree);
+    const codeTouched = files.some((f) => CODE_RE.test(f));
+    const depsChanged = files.some((f) => DEPS_RE.test(f));
+
+    const scans = await securityScan(worktree, { depsChanged });
     stages.push(...scans);
     const scanOk = scans.every((s) => s.ok);
 
-    const diff = await diffStat(worktree);
-    const red = await runner.run(redTeamPrompt(diff), { cwd: worktree });
-    const redClear = /^\s*CLEAR\b/i.test(red.text.trim()) || /no exploitable/i.test(red.text);
-    stages.push({ name: `red-team(r${round})`, ok: redClear, detail: red.text.replace(/\s+/g, " ").slice(0, 600) });
+    let redClear = true;
+    if (!codeTouched) {
+      stages.push({ name: `red-team(r${round})`, ok: true, skipped: true, detail: "no executable code changed" });
+    } else {
+      const diff = await diffStat(worktree);
+      const d = await systemOne(runner, redTeamState(diff), [
+        {
+          name: "verdict",
+          instructions: "Does this diff introduce a concrete, exploitable defect?",
+          criteria: "Only answer 'findings' for a specific exploitable bug INTRODUCED by this diff.",
+          options: ["clear", "findings"],
+        },
+      ]);
+      redClear = d.verdict === "clear";
+      stages.push({ name: `red-team(r${round})`, ok: redClear, detail: `red-team: ${d.verdict}` });
+    }
 
     clean = checksOk && scanOk && redClear;
     if (clean || round >= maxRounds) break;
