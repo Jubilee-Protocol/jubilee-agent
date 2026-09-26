@@ -109,7 +109,7 @@ It's model-interchangeable — swap between Gemini, GPT-4, Claude, Grok, or loca
 
 ---
 
-## 🧠 Architecture
+## 🧠 Architecture (ZK-Rollup)
 
 ### The Triune (Core Agents)
 
