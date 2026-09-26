@@ -74,20 +74,24 @@ export function applyEdits(worktree: string, blocks: EditBlock[]): ApplyResult {
       continue;
     }
     let content: string;
+    let exists = true;
     try {
       content = fs.readFileSync(abs, "utf8");
     } catch {
-      failed.push(b.file);
-      continue;
+      content = "";
+      exists = false;
     }
 
     let next: string | null = null;
-    if (b.search && content.includes(b.search)) {
+    if (!b.search && !exists) {
+      // No SEARCH + file absent = CREATE it.
+      next = b.replace.endsWith("\n") ? b.replace : b.replace + "\n";
+    } else if (b.search && content.includes(b.search)) {
       next = content.replace(b.search, b.replace);
     } else if (b.search && content.includes(b.search.trim())) {
       next = content.replace(b.search.trim(), b.replace.trim());
-    } else if (!b.search) {
-      // No SEARCH = new file (or append).
+    } else if (!b.search && exists) {
+      // No SEARCH on an existing file = append.
       next = content + b.replace;
     }
 
@@ -95,6 +99,7 @@ export function applyEdits(worktree: string, blocks: EditBlock[]): ApplyResult {
       failed.push(b.file);
       continue;
     }
+    fs.mkdirSync(path.dirname(abs), { recursive: true });
     fs.writeFileSync(abs, next);
     applied++;
   }
