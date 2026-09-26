@@ -463,7 +463,7 @@ jubilee-agent/
 
 Jubilee OS is open source and built as a labor of love.
 
-[![Donate Crypto](https://img.shields.io/badge/Donate-Crypto-f7931a?logo=bitcoin&logoColor=white)](https://commerce.coinbase.com/checkout/122a2979-e559-44b9-bb9d-2ff0c6a3025b)
+[![Donate Crypto](https://img.shields.io/badge/Donate-Crypto-f7931a?logo=bitcoin&logoColor=white)](bc1qt74l6xzszqqjrn7ew58v9magzra8h8qfctua0e)
 
 > *"Each of you should give what you have decided in your heart to give, not reluctantly or under compulsion, for God loves a cheerful giver."* — 2 Corinthians 9:7
 
@@ -471,7 +471,7 @@ Jubilee OS is open source and built as a labor of love.
 
 ## 🤝 Contributing
 
-We welcome contributions! Fork the repo and submit a PR.
+Want to give a contribution? Fork the repo and submit a PR.
 
 ## 📄 License
 
