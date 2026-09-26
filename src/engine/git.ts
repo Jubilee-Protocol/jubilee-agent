@@ -140,3 +140,40 @@ export async function gitLsFiles(cwd: string): Promise<string[]> {
     .map((s) => s.trim())
     .filter(Boolean);
 }
+
+/** Read the body of the single marker-tagged comment on an issue, if any. */
+export async function readIssueLedger(repo: string, num: number, marker: string, cwd: string): Promise<string> {
+  try {
+    const raw = await gh(["api", `repos/${repo}/issues/${num}/comments`], cwd);
+    const arr = JSON.parse(raw) as Array<{ id: number; body: string }>;
+    const found = arr.find((c) => (c.body ?? "").includes(marker));
+    return found ? found.body : "";
+  } catch {
+    return "";
+  }
+}
+
+/** Create or update the single marker-tagged comment on an issue (durable state). */
+export async function upsertIssueLedger(
+  repo: string,
+  num: number,
+  marker: string,
+  body: string,
+  cwd: string,
+): Promise<void> {
+  const full = `${marker}\n${body}`;
+  let id = "";
+  try {
+    const raw = await gh(["api", `repos/${repo}/issues/${num}/comments`], cwd);
+    const arr = JSON.parse(raw) as Array<{ id: number; body: string }>;
+    const found = arr.find((c) => (c.body ?? "").includes(marker));
+    if (found) id = String(found.id);
+  } catch {
+    /* fall through to create */
+  }
+  if (id) {
+    await gh(["api", "-X", "PATCH", `repos/${repo}/issues/comments/${id}`, "-f", `body=${full}`], cwd);
+  } else {
+    await gh(["api", "-X", "POST", `repos/${repo}/issues/${num}/comments`, "-f", `body=${full}`], cwd);
+  }
+}

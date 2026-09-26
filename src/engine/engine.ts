@@ -33,6 +33,8 @@ import {
   ghIssueLabels,
   ghIssueComments,
   gitLsFiles,
+  readIssueLedger,
+  upsertIssueLedger,
 } from "./git.js";
 import type { AutonomyLevel, EngineConfig, EngineEvent, EngineTask, VerifyCheck } from "./types.js";
 import { AUTONOMY_LABELS } from "./types.js";
@@ -130,6 +132,9 @@ function executePrompt(t: EngineTask, plan: string, fileContext = "", feedback =
     "Copy the SEARCH lines EXACTLY. Make the smallest correct change. Do NOT modify secrets, network config, or deploy scripts.",
   ].join("\n");
 }
+
+/** Durable per-issue state lives as a single marker-tagged issue comment. */
+const LEDGER_MARKER = "<!-- jubilee-engine:ledger -->";
 
 function contractPrompt(t: EngineTask): string {
   return [
@@ -381,9 +386,27 @@ export class Engine {
       return;
     }
 
-    // -- CONTRACT (typed preamble: scope · success · constraints) --
+    // -- STATE (durable): reuse contract/plan recorded by a prior run --
     let contract = "";
-    {
+    let plan = "";
+    let attempts = 0;
+    if (task.issueNumber) {
+      const ledger = await readIssueLedger(this.config.repo, task.issueNumber, LEDGER_MARKER, this.config.repoRoot);
+      const json = ledger.slice(ledger.indexOf(LEDGER_MARKER) + LEDGER_MARKER.length).trim().replace(/^```json\n?/, "").replace(/\n?```$/, "");
+      try {
+        const saved = JSON.parse(json);
+        contract = typeof saved?.contract === "string" ? saved.contract : "";
+        plan = typeof saved?.plan === "string" ? saved.plan : "";
+        attempts = Number(saved?.attempts ?? 0) || 0;
+      } catch {
+        /* no usable ledger */
+      }
+    }
+
+    // -- CONTRACT (typed preamble: scope · success · constraints) --
+    if (contract) {
+      this.emit("task", "📜 Contract reused (state).", task.id);
+    } else {
       const t0 = Date.now();
       const res = await this.runner.run(contractPrompt(task));
       contract = res.text.trim().slice(0, 1000);
@@ -391,9 +414,10 @@ export class Engine {
       this.emit("task", "📜 Contract set.", task.id);
     }
 
-    // -- PLAN --
-    let plan = "";
-    {
+    // -- PLAN (reused on the first attempt only, so retries re-plan) --
+    if (plan && attempts === 0) {
+      this.emit("task", "🧠 Plan reused (state).", task.id);
+    } else {
       const t0 = Date.now();
       let humanNotes = "";
       if (task.issueNumber) {
@@ -404,6 +428,21 @@ export class Engine {
       this.record(task, "plan", "ok", plan.slice(0, 500), res.costUsd, t0);
       this.store.update(task.id, { status: "planned" });
       this.emit("task", "🧠 Planned.", task.id);
+    }
+
+    // Persist state so the next run doesn't re-derive it.
+    if (task.issueNumber) {
+      try {
+        await upsertIssueLedger(
+          this.config.repo,
+          task.issueNumber,
+          LEDGER_MARKER,
+          "```json\n" + JSON.stringify({ contract, plan, attempts: attempts + 1, updatedAt: new Date().toISOString() }) + "\n```",
+          this.config.repoRoot,
+        );
+      } catch {
+        /* state is best-effort */
+      }
     }
 
     // -- VET (typed decision: safe | ask — "ask" reaches a person) --
