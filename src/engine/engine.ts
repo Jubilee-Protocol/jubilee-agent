@@ -482,19 +482,19 @@ export class Engine {
       worktree = await createWorktree(this.config.repoRoot, branch, this.config.workRoot);
       this.store.update(task.id, { status: "executing", branch });
 
-      // A git worktree shares .git but NOT untracked files like node_modules, so
-      // checks would fail ("command not found"). Give the worktree a REAL
-      // dependency tree: a hardlink copy is fast and preserves TypeScript's
-      // module resolution (a symlink breaks it -> TS7016).
+      // A git worktree shares .git but NOT untracked files like node_modules.
+      // Copying/symlinking it is unreliable: bun's layout uses symlinks into a
+      // .bun store, which don't survive relocation (modules go missing). Install
+      // for real when the worktree has no deps.
       try {
-        const nm = path.join(this.config.repoRoot, "node_modules");
-        const dest = path.join(worktree, "node_modules");
-        if (fs.existsSync(nm) && !fs.existsSync(dest)) {
-          try {
-            await execFileAsync("cp", ["-al", nm, dest], { maxBuffer: 64 * 1024 * 1024 });
-          } catch {
-            fs.symlinkSync(nm, dest, "dir");
-          }
+        const wPkg = fs.existsSync(path.join(worktree, "package.json"));
+        const wDeps = fs.existsSync(path.join(worktree, "node_modules"));
+        if (wPkg && !wDeps) {
+          const useBun =
+            fs.existsSync(path.join(worktree, "bun.lock")) || fs.existsSync(path.join(worktree, "bun.lockb"));
+          const install = useBun ? "bun install" : "npm ci --no-audit --no-fund";
+          this.emit("task", `📦 deps: ${install}`, task.id);
+          await runChecks(worktree, [{ name: "install", cmd: install }], 20 * 60_000);
         }
       } catch {
         /* best effort — setupCommand below can still install */
