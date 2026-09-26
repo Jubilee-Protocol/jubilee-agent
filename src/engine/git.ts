@@ -49,7 +49,20 @@ export async function hasChanges(cwd: string): Promise<boolean> {
 
 export async function commitAll(cwd: string, message: string): Promise<string> {
   await git(["add", "-A"], cwd);
-  await git(["commit", "-m", message, "--no-verify"], cwd);
+  // CI runners have no git identity; pass one explicitly or the commit fails.
+  await git(
+    [
+      "-c",
+      "user.name=Jubilee Engine",
+      "-c",
+      "user.email=engine@jubilee.local",
+      "commit",
+      "-m",
+      message,
+      "--no-verify",
+    ],
+    cwd,
+  );
   return git(["rev-parse", "HEAD"], cwd);
 }
 
