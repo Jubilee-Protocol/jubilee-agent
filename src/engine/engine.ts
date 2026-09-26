@@ -571,6 +571,7 @@ export class Engine {
           this.record(task, "execute", "fail", "no applicable change after retries", cost, t0);
           this.store.update(task.id, { status: "failed", lastError: "no applicable change" });
           this.emit("task", "⚠️ No applicable change after retries.", task.id);
+          await this.ask(task, "I couldn't produce a change that applies cleanly after two attempts. The file may differ from what I expected — can you confirm the target file, or give a hint?");
           return;
         }
       }
@@ -578,6 +579,7 @@ export class Engine {
         this.record(task, "execute", "fail", "no changes produced", cost, t0);
         this.store.update(task.id, { status: "failed", lastError: "no changes" });
         this.emit("task", "⚠️ No changes produced.", task.id);
+        await this.ask(task, "I read the task but produced no change — the request may be ambiguous or already satisfied. Can you clarify what should change?");
         return;
       }
       this.record(task, "execute", "ok", await diffStat(worktree), cost, t0);
@@ -585,6 +587,7 @@ export class Engine {
       this.record(task, "execute", "fail", String(e?.message ?? e), cost, Date.now());
       this.store.update(task.id, { status: "failed", lastError: String(e?.message ?? e) });
       this.emit("task", `⚠️ Execute failed: ${String(e?.message ?? e)}`, task.id);
+      await this.ask(task, `Execution failed: ${String(e?.message ?? e)}. This may be an environment flake or something I can't resolve alone — can you advise?`);
       if (worktree) await removeWorktree(this.config.repoRoot, worktree);
       return;
     }
@@ -608,6 +611,7 @@ export class Engine {
       if (!g.ok) {
         this.store.update(task.id, { status: "failed", lastError: "gauntlet not clear" });
         this.emit("task", "🛡️ Gauntlet NOT clear — not presenting.", task.id);
+        await this.ask(task, "My change couldn't pass verification (checks/scan/red-team) after the round budget. I won't present unresolved work — can you review the approach or the failing gate?");
         return;
       }
       this.emit("task", `🛡️ Gauntlet CLEAR after ${g.rounds} round(s).`, task.id);
@@ -644,6 +648,7 @@ export class Engine {
       this.record(task, "package", "fail", String(e?.message ?? e), 0, Date.now());
       this.store.update(task.id, { status: "failed", lastError: String(e?.message ?? e) });
       this.emit("task", `⚠️ Package failed: ${String(e?.message ?? e)}`, task.id);
+      await this.ask(task, `The change passed verification but packaging (branch/PR) failed: ${String(e?.message ?? e)}. Can you check repo permissions or branch protection?`);
       return;
     } finally {
       await removeWorktree(this.config.repoRoot, worktree);
@@ -671,6 +676,30 @@ export class Engine {
   }
 
   // ---- helpers ----
+
+  /** Surface a specific question to the human when the engine is stuck. */
+  private async ask(task: EngineTask, question: string): Promise<void> {
+    if (!task.issueNumber) return;
+    try {
+      await ghIssueLabels(this.config.repo, task.issueNumber, ["engine:question"], ["agent-ready"], this.config.repoRoot);
+      await ghIssueComment(
+        this.config.repo,
+        task.issueNumber,
+        [
+          "🤖 **I'm stuck — I need your steer.**",
+          "",
+          `**What happened:** ${question}`,
+          "",
+          "**How to help:** reply below with guidance (I read recent comments into my next plan), then re-add the `agent-ready` label and I'll resume.",
+          "Meanwhile I keep working the other repos.",
+        ].join("\n"),
+        this.config.repoRoot,
+      );
+      this.emit("task", "❓ Asked a question on the issue.", task.id);
+    } catch (e: any) {
+      this.emit("task", `note: could not post question: ${String(e?.message ?? e)}`, task.id);
+    }
+  }
 
   private async block(task: EngineTask, reason: string): Promise<void> {
     this.store.update(task.id, { status: "blocked", lastError: reason });
