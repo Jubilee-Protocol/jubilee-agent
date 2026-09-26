@@ -15,6 +15,7 @@ import * as path from "node:path";
 import { EngineStore } from "./store.js";
 import { defaultRunner, runnerFor, type AgentRunner } from "./runner.js";
 import { systemOne, extractArray } from "./decision.js";
+import { parseEdits, applyEdits } from "./edits.js";
 import { runChecks, allPassed } from "./verify.js";
 import { runGauntlet } from "./gauntlet.js";
 import {
@@ -110,18 +111,23 @@ function vetPrompt(t: EngineTask): string {
     .join("\n");
 }
 
-function executePrompt(t: EngineTask, plan: string, fileContext = ""): string {
+function executePrompt(t: EngineTask, plan: string, fileContext = "", feedback = ""): string {
   return [
     "You are the Will — the execution stage of the Jubilee Engine.",
     `Task: ${t.title}`,
     `Approved plan:\n${plan}`,
-    fileContext ? `\nCurrent file contents (authoritative — diff against these):\n${fileContext}` : "",
+    fileContext ? `\nCurrent file contents (authoritative — edit against these EXACTLY):\n${fileContext}` : "",
+    feedback ? `\nYour previous attempt failed: ${feedback}` : "",
     "",
-    "Return ONLY a unified diff in git-apply format, inside a single ```diff fenced block.",
-    "Use exact repository-relative paths (a/… and b/…) and at least 3 context lines per hunk.",
-    "The diff MUST apply cleanly to the file contents shown above.",
-    "Make the smallest correct change. Do NOT modify secrets, network config, or deploy scripts.",
-    "If no change is needed, return an empty diff block.",
+    "Return the change as Aider-style edit blocks, one per file:",
+    "path/to/file",
+    "<<<<<<< SEARCH",
+    "<exact existing lines, copied verbatim from the file contents above>",
+    "=======",
+    "<replacement lines>",
+    ">>>>>>> REPLACE",
+    "",
+    "Copy the SEARCH lines EXACTLY. Make the smallest correct change. Do NOT modify secrets, network config, or deploy scripts.",
   ].join("\n");
 }
 
@@ -465,27 +471,46 @@ export class Engine {
           /* fall through to the regex fallback */
         }
         if (!chosen.length) chosen = extractPaths(plan).slice(0, 6);
-        const fileContext = readFileContext(worktree, chosen);
-        const res = await this.execRunner.run(executePrompt(task, `${contract}\n\n${plan}`, fileContext), { cwd: worktree });
-        cost += res.costUsd;
-        const patch = extractDiff(res.text);
-        if (!patch) {
-          this.record(task, "execute", "fail", "model returned no diff", res.costUsd, t0);
-          this.store.update(task.id, { status: "failed", lastError: "no diff returned" });
-          this.emit("task", "⚠️ Model returned no diff.", task.id);
-          return;
+        // Bounded recovery: up to 2 attempts; the failure is fed back to the model.
+        let applied = false;
+        let feedback = "";
+        for (let attempt = 1; attempt <= 2 && !applied; attempt++) {
+          const fileContext = readFileContext(worktree, chosen);
+          const res = await this.execRunner.run(
+            executePrompt(task, `${contract}\n\n${plan}`, fileContext, feedback),
+            { cwd: worktree },
+          );
+          cost += res.costUsd;
+
+          const patch = extractDiff(res.text);
+          if (patch) {
+            const pf = path.join(worktree, ".engine.patch");
+            fs.writeFileSync(pf, patch);
+            try {
+              await applyPatch(worktree, pf);
+              applied = true;
+            } catch (e: any) {
+              feedback = `Your diff did not apply (${String(e?.message ?? e)}). Return SEARCH/REPLACE blocks whose SEARCH lines match the file EXACTLY.`;
+            } finally {
+              fs.rmSync(pf, { force: true });
+            }
+          }
+          if (!applied) {
+            const edits = parseEdits(res.text);
+            if (edits.length) {
+              const r = applyEdits(worktree, edits);
+              if (r.applied > 0) applied = true;
+              else feedback = `SEARCH text did not match (${r.failed.join(", ")}). Copy the exact existing lines into SEARCH.`;
+            } else {
+              feedback = "No edits parsed. Return SEARCH/REPLACE blocks (or a unified diff).";
+            }
+          }
         }
-        const pf = path.join(worktree, ".engine.patch");
-        fs.writeFileSync(pf, patch);
-        try {
-          await applyPatch(worktree, pf);
-        } catch (e: any) {
-          this.record(task, "execute", "fail", `git apply failed: ${String(e?.message ?? e)}`, cost, t0);
-          this.store.update(task.id, { status: "failed", lastError: "patch did not apply" });
-          this.emit("task", "⚠️ Patch did not apply.", task.id);
+        if (!applied) {
+          this.record(task, "execute", "fail", "no applicable change after retries", cost, t0);
+          this.store.update(task.id, { status: "failed", lastError: "no applicable change" });
+          this.emit("task", "⚠️ No applicable change after retries.", task.id);
           return;
-        } finally {
-          fs.rmSync(pf, { force: true });
         }
       }
       if (!(await hasChanges(worktree))) {
