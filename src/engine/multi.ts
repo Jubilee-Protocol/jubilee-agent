@@ -68,7 +68,10 @@ export async function runMulti(
         message: `▶ ${repo} · checks: ${cfg.checks.map((c) => c.name).join(", ")}`,
         at: new Date().toISOString(),
       });
-      await new Engine(cfg, onEvent).tick();
+      const engine = new Engine(cfg, onEvent);
+      // Each repo reads its OWN isolated queue, so it must sync its own issues.
+      await engine.syncIssues();
+      await engine.tick();
     } catch (err: any) {
       onEvent({
         type: "engine",
