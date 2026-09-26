@@ -92,6 +92,33 @@ The **GitHub issue tracker is the control panel**:
 issue (the engine reads recent comments into its plan). The pinned **Engine
 Review Queue** issue lists everything live. See [docs/ENGINE.md](docs/ENGINE.md).
 
+### Capabilities
+
+| Capability | Detail |
+|---|---|
+| **Tiered models** | Cheap/local model for *decisions* (`JUBILEE_RUNNER`), a stronger hosted model for *code* (`JUBILEE_EXEC_RUNNER`) — judgements stay cheap, only code-writing costs. |
+| **Typed decisions** | Contract, plan-vet and file-selection are structured calls with a small answer space, not open prose. |
+| **Durable state** | A per-issue ledger (contract + plan) is persisted as an issue comment and reused next run — no re-derivation. |
+| **Evidence-based gate** | The gauntlet clears on objective checks; pre-existing repo issues never block, and red-team only reviews code the change actually touches. |
+| **Multi-repo** | Set `JUBILEE_REPOS` (comma-separated) to run one tick per repo, each with its own `JUBILEE_CHECKS_<SLUG>` / `JUBILEE_SETUP_<SLUG>`. A failing repo is isolated. |
+| **Portable install** | In the isolated worktree the engine installs the repo's own deps (`bun install` / `npm ci`) and sets a git identity before committing. |
+
+### Configuration reference
+
+| Variable | Purpose |
+|---|---|
+| `JUBILEE_RUNNER` | decision tier (`ollama`, `openrouter`, `github-models`, ...) |
+| `JUBILEE_MODEL` | model for the decision tier |
+| `JUBILEE_EXEC_RUNNER` / `JUBILEE_EXEC_MODEL` | code tier (defaults to the decision tier) |
+| `JUBILEE_REPOS` | comma-separated `owner/name` list for multi-repo |
+| `JUBILEE_CHECKS` / `JUBILEE_CHECKS_<SLUG>` | check commands (`name=cmd; ...`) |
+| `JUBILEE_SETUP` / `JUBILEE_SETUP_<SLUG>` | per-repo bootstrap run before checks |
+| `JUBILEE_AUTONOMY_LEVEL` | `0`–`4` (see the table above) |
+| `JUBILEE_GAUNTLET_ROUNDS` | max remediation rounds (default `3`) |
+| `JUBILEE_DAILY_BUDGET_USD` | daily spend cap |
+
+---
+
 ## 🏗️ What Is Jubilee OS?
 
 Jubilee OS is a **Triune AI Operating System** that can:
