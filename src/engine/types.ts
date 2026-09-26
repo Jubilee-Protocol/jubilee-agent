@@ -57,7 +57,7 @@ export interface EngineTask {
 export interface RunRecord {
   id: string;
   taskId: string;
-  stage: "plan" | "vet" | "execute" | "verify" | "package" | "record";
+  stage: "contract" | "plan" | "vet" | "score" | "execute" | "verify" | "package" | "record";
   status: "ok" | "fail" | "skip";
   detail?: string;
   costUsd: number;
@@ -105,6 +105,9 @@ export interface EngineConfig {
   reviewIssue?: number;
   /** Optional per-repo setup command run in the worktree before checks (e.g. `bun install`). */
   setupCommand?: string;
+  /** Runner kind + model for the code-writing (execute) tier. Falls back to the decide runner. */
+  execRunnerKind?: string;
+  execModel?: string;
   /** Local path to the working clone used as the worktree base. */
   repoRoot: string;
 }

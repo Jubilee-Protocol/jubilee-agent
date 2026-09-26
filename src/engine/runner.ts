@@ -207,14 +207,18 @@ export class OpenAICompatRunner implements AgentRunner {
   }
 }
 
-export function defaultRunner(): AgentRunner {
-  const kind = process.env.JUBILEE_RUNNER ?? "triune";
+/** Build a runner for an explicit kind (used for tiered decide/exec runners). */
+export function runnerFor(kind: string, model?: string): AgentRunner {
   if (kind === "stub") return new StubRunner();
-  if (kind === "ollama") return new OllamaRunner();
-  if (kind === "github-models" || kind === "github") return new GitHubModelsRunner();
+  if (kind === "ollama") return new OllamaRunner(model);
+  if (kind === "github-models" || kind === "github") return new GitHubModelsRunner(model);
   if (kind === "openai-compatible" || kind === "hosted" || kind === "groq" || kind === "gemini") {
-    return new OpenAICompatRunner();
+    return new OpenAICompatRunner(model);
   }
-  if (kind === "openrouter") return new OpenRouterRunner();
+  if (kind === "openrouter") return new OpenRouterRunner(model);
   return new TriuneRunner(Number(process.env.JUBILEE_COST_PER_CALL_USD ?? 0));
+}
+
+export function defaultRunner(): AgentRunner {
+  return runnerFor(process.env.JUBILEE_RUNNER ?? "triune");
 }

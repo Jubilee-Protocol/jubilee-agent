@@ -131,3 +131,12 @@ export async function ensureClone(repo: string, dir: string, cwd: string): Promi
   await gh(["repo", "clone", repo, dir], cwd);
   return dir;
 }
+
+/** Tracked files in a worktree (used to pick what the model should read). */
+export async function gitLsFiles(cwd: string): Promise<string[]> {
+  const out = await git(["ls-files"], cwd);
+  return out
+    .split("\n")
+    .map((s) => s.trim())
+    .filter(Boolean);
+}
