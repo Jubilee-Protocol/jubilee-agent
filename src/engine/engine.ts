@@ -12,6 +12,10 @@
  */
 import * as fs from "node:fs";
 import * as path from "node:path";
+import { execFile } from "node:child_process";
+import { promisify } from "node:util";
+
+const execFileAsync = promisify(execFile);
 import { EngineStore } from "./store.js";
 import { defaultRunner, runnerFor, type AgentRunner } from "./runner.js";
 import { systemOne, extractArray } from "./decision.js";
@@ -479,11 +483,19 @@ export class Engine {
       this.store.update(task.id, { status: "executing", branch });
 
       // A git worktree shares .git but NOT untracked files like node_modules, so
-      // checks would fail with "command not found". Link the repo's deps in.
+      // checks would fail ("command not found"). Give the worktree a REAL
+      // dependency tree: a hardlink copy is fast and preserves TypeScript's
+      // module resolution (a symlink breaks it -> TS7016).
       try {
         const nm = path.join(this.config.repoRoot, "node_modules");
-        const link = path.join(worktree, "node_modules");
-        if (fs.existsSync(nm) && !fs.existsSync(link)) fs.symlinkSync(nm, link, "dir");
+        const dest = path.join(worktree, "node_modules");
+        if (fs.existsSync(nm) && !fs.existsSync(dest)) {
+          try {
+            await execFileAsync("cp", ["-al", nm, dest], { maxBuffer: 64 * 1024 * 1024 });
+          } catch {
+            fs.symlinkSync(nm, dest, "dir");
+          }
+        }
       } catch {
         /* best effort — setupCommand below can still install */
       }
