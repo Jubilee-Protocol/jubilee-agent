@@ -13,7 +13,8 @@
 import * as fs from "node:fs";
 import * as path from "node:path";
 import { EngineStore } from "./store.js";
-import { defaultRunner, type AgentRunner } from "./runner.js";
+import { defaultRunner, runnerFor, type AgentRunner } from "./runner.js";
+import { systemOne, extractArray } from "./decision.js";
 import { runChecks, allPassed } from "./verify.js";
 import { runGauntlet } from "./gauntlet.js";
 import {
@@ -30,6 +31,7 @@ import {
   ghIssueComment,
   ghIssueLabels,
   ghIssueComments,
+  gitLsFiles,
 } from "./git.js";
 import type { AutonomyLevel, EngineConfig, EngineEvent, EngineTask, VerifyCheck } from "./types.js";
 import { AUTONOMY_LABELS } from "./types.js";
@@ -72,6 +74,8 @@ export function loadConfig(partial?: Partial<EngineConfig>): EngineConfig {
     gauntletRounds: Number(process.env.JUBILEE_GAUNTLET_ROUNDS ?? 3),
     reviewIssue: process.env.JUBILEE_REVIEW_ISSUE ? Number(process.env.JUBILEE_REVIEW_ISSUE) : undefined,
     setupCommand: process.env.JUBILEE_SETUP || undefined,
+    execRunnerKind: process.env.JUBILEE_EXEC_RUNNER || undefined,
+    execModel: process.env.JUBILEE_EXEC_MODEL || undefined,
     ...partial,
   };
 }
@@ -80,12 +84,13 @@ export function loadConfig(partial?: Partial<EngineConfig>): EngineConfig {
 // Prompts
 // ---------------------------------------------------------------------------
 
-function planPrompt(t: EngineTask, humanNotes = ""): string {
+function planPrompt(t: EngineTask, humanNotes = "", contract = ""): string {
   return [
     "You are the planning stage of the Jubilee Engine (autonomy L" + ").",
     `Task: ${t.title}`,
     t.issueNumber ? `Issue: #${t.issueNumber}` : "",
     t.body ?? "",
+    contract ? `\nContract to honour:\n${contract}` : "",
     humanNotes ? `\nHuman feedback (honour this):\n${humanNotes.slice(0, 3000)}` : "",
     "Produce a short, concrete implementation plan with exact files to touch and the acceptance test. No code yet.",
   ]
@@ -117,6 +122,30 @@ function executePrompt(t: EngineTask, plan: string, fileContext = ""): string {
     "The diff MUST apply cleanly to the file contents shown above.",
     "Make the smallest correct change. Do NOT modify secrets, network config, or deploy scripts.",
     "If no change is needed, return an empty diff block.",
+  ].join("\n");
+}
+
+function contractPrompt(t: EngineTask): string {
+  return [
+    "Write a compact CONTRACT for this task. Terse, exactly three lines:",
+    "SCOPE: <the files/area this changes>",
+    "SUCCESS: <the objective test that proves it is done>",
+    "CONSTRAINTS: <what must NOT change>",
+    "",
+    `TASK: ${t.title}`,
+    t.body ?? "",
+  ].join("\n");
+}
+
+function scorePrompt(t: EngineTask, plan: string, candidates: string[]): string {
+  return [
+    "Choose the FEWEST files a coder must read to make this change.",
+    `TASK: ${t.title}`,
+    `PLAN: ${plan.slice(0, 1500)}`,
+    "Candidate files (choose only from these):",
+    candidates.slice(0, 120).join("\n"),
+    "",
+    'Reply with ONLY a JSON array of up to 6 repository-relative paths, e.g. ["src/a.ts"].',
   ].join("\n");
 }
 
@@ -176,6 +205,8 @@ export class Engine {
   private busy = false;
   private readonly store: EngineStore;
   private readonly runner: AgentRunner;
+  /** Code-writing tier (execute). Falls back to the decide runner. */
+  private readonly execRunner: AgentRunner;
 
   constructor(
     private readonly config: EngineConfig,
@@ -184,6 +215,7 @@ export class Engine {
   ) {
     this.store = new EngineStore(config.statePath);
     this.runner = runner ?? defaultRunner();
+    this.execRunner = config.execRunnerKind ? runnerFor(config.execRunnerKind, config.execModel) : this.runner;
   }
 
   // ---- lifecycle ----
@@ -343,6 +375,16 @@ export class Engine {
       return;
     }
 
+    // -- CONTRACT (typed preamble: scope · success · constraints) --
+    let contract = "";
+    {
+      const t0 = Date.now();
+      const res = await this.runner.run(contractPrompt(task));
+      contract = res.text.trim().slice(0, 1000);
+      this.record(task, "contract", "ok", contract, res.costUsd, t0);
+      this.emit("task", "📜 Contract set.", task.id);
+    }
+
     // -- PLAN --
     let plan = "";
     {
@@ -351,26 +393,34 @@ export class Engine {
       if (task.issueNumber) {
         humanNotes = await ghIssueComments(this.config.repo, task.issueNumber, this.config.repoRoot);
       }
-      const res = await this.runner.run(planPrompt(task, humanNotes));
+      const res = await this.runner.run(planPrompt(task, humanNotes, contract));
       plan = res.text;
       this.record(task, "plan", "ok", plan.slice(0, 500), res.costUsd, t0);
       this.store.update(task.id, { status: "planned" });
       this.emit("task", "🧠 Planned.", task.id);
     }
 
-    // -- VET --
+    // -- VET (typed decision: safe | ask — "ask" reaches a person) --
     {
       const t0 = Date.now();
-      const res = await this.runner.run(vetPrompt(task));
-      const decision = decisionOf(res.text);
-      // Model vetting is advisory unless JUBILEE_REQUIRE_REVIEW=1. The hard
-      // gates are the level/risk check above and the verification checks below.
-      const blocking = this.config.requireReview && decision !== "approve";
-      this.record(task, "vet", blocking ? "fail" : "ok", `${decision}: ${res.text.slice(0, 220)}`, res.costUsd, t0);
-      this.emit("task", `🧭 Prophet: ${decision}${blocking ? " (blocking)" : " (advisory)"}`, task.id);
+      const d = await systemOne(
+        this.runner,
+        `TASK: ${task.title}\nRISK: ${task.risk}\nCONTRACT:\n${contract}`,
+        [
+          {
+            name: "decision",
+            instructions: "Is this safe to do autonomously, without touching money, keys, mainnet, deploys, or treasury?",
+            criteria: "Docs, tests, mechanical edits = safe. Deletes, network, history rewrites, funds = ask.",
+            options: ["safe", "ask"],
+          },
+        ],
+      );
+      const decision = d.decision;
+      const blocking = decision === "ask" || (this.config.requireReview && decision !== "safe");
+      this.record(task, "vet", blocking ? "fail" : "ok", `decision=${decision}`, 0, t0);
+      this.emit("task", `🧭 Vet: ${decision}${blocking ? " (→ human)" : ""}`, task.id);
       if (blocking) {
-        this.store.update(task.id, { status: "vetoed", lastError: "Prophet rejected" });
-        this.emit("task", "🛑 Vetoed by Prophet.", task.id);
+        await this.block(task, `vet says "${decision}" — needs a human call`);
         return;
       }
     }
@@ -400,9 +450,23 @@ export class Engine {
           return;
         }
       } else {
-        // Model path: give the model real file contents, then apply its diff.
-        const fileContext = readFileContext(worktree, extractPaths(plan));
-        const res = await this.runner.run(executePrompt(task, plan, fileContext), { cwd: worktree });
+        // SCORE (typed): choose the files to read, then EXECUTE on the code tier.
+        let chosen: string[] = [];
+        try {
+          const all = await gitLsFiles(worktree);
+          const named = extractPaths(plan).filter((p) => all.includes(p));
+          const candidates = (named.length ? named : all).slice(0, 120);
+          if (candidates.length) {
+            const score = await this.runner.run(scorePrompt(task, plan, candidates));
+            chosen = extractArray(score.text).filter((p) => candidates.includes(p)).slice(0, 6);
+            this.emit("task", `🎯 SCORE: ${chosen.length ? chosen.join(", ") : "fallback"}`, task.id);
+          }
+        } catch {
+          /* fall through to the regex fallback */
+        }
+        if (!chosen.length) chosen = extractPaths(plan).slice(0, 6);
+        const fileContext = readFileContext(worktree, chosen);
+        const res = await this.execRunner.run(executePrompt(task, `${contract}\n\n${plan}`, fileContext), { cwd: worktree });
         cost += res.costUsd;
         const patch = extractDiff(res.text);
         if (!patch) {
@@ -558,7 +622,7 @@ export class Engine {
 
   private record(
     task: EngineTask,
-    stage: "plan" | "vet" | "execute" | "verify" | "package" | "record",
+    stage: "contract" | "plan" | "vet" | "score" | "execute" | "verify" | "package" | "record",
     status: "ok" | "fail" | "skip",
     detail: string,
     costUsd: number,
