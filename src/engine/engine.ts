@@ -478,6 +478,16 @@ export class Engine {
       worktree = await createWorktree(this.config.repoRoot, branch, this.config.workRoot);
       this.store.update(task.id, { status: "executing", branch });
 
+      // A git worktree shares .git but NOT untracked files like node_modules, so
+      // checks would fail with "command not found". Link the repo's deps in.
+      try {
+        const nm = path.join(this.config.repoRoot, "node_modules");
+        const link = path.join(worktree, "node_modules");
+        if (fs.existsSync(nm) && !fs.existsSync(link)) fs.symlinkSync(nm, link, "dir");
+      } catch {
+        /* best effort — setupCommand below can still install */
+      }
+
       // Per-repo bootstrap (e.g. install deps) before the change is made.
       if (this.config.setupCommand) {
         this.emit("task", `⚙️ setup: ${this.config.setupCommand}`, task.id);
