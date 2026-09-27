@@ -17,7 +17,7 @@ import { promisify } from "node:util";
 
 const execFileAsync = promisify(execFile);
 import { EngineStore } from "./store.js";
-import { defaultRunner, runnerFor, type AgentRunner } from "./runner.js";
+import { defaultRunner, runnerFor, FallbackRunner, type AgentRunner } from "./runner.js";
 import { systemOne, extractArray } from "./decision.js";
 import { parseEdits, applyEdits } from "./edits.js";
 import { runChecks, allPassed } from "./verify.js";
@@ -237,7 +237,11 @@ export class Engine {
   ) {
     this.store = new EngineStore(config.statePath);
     this.runner = runner ?? defaultRunner();
-    this.execRunner = config.execRunnerKind ? runnerFor(config.execRunnerKind, config.execModel) : this.runner;
+    const execBase = config.execRunnerKind ? runnerFor(config.execRunnerKind, config.execModel) : this.runner;
+    const fbKind = process.env.JUBILEE_EXEC_FALLBACK_RUNNER;
+    this.execRunner = fbKind
+      ? new FallbackRunner(execBase, runnerFor(fbKind, process.env.JUBILEE_EXEC_FALLBACK_MODEL))
+      : execBase;
   }
 
   // ---- lifecycle ----
@@ -513,6 +517,18 @@ export class Engine {
         await runChecks(worktree, [{ name: "setup", cmd: this.config.setupCommand }], 20 * 60_000);
       }
 
+      // Baseline the checks on the CLEAN tree: a check that already fails here is
+      // pre-existing and must not block the change (only new failures gate).
+      let baseline: Record<string, boolean> | undefined;
+      try {
+        const base = await runChecks(worktree, this.config.checks, 10 * 60_000);
+        baseline = Object.fromEntries(base.map((r) => [r.name, r.ok]));
+        const pre = base.filter((r) => !r.ok).map((r) => r.name);
+        if (pre.length) this.emit("task", `🧱 baseline: pre-existing failures → ${pre.join(", ")} (advisory)`, task.id);
+      } catch {
+        /* best effort — no baseline means every failure gates */
+      }
+
       const t0 = Date.now();
       if (task.artifacts?.executeCommand) {
         // Deterministic path: run a shell command directly in the worktree.
@@ -607,6 +623,7 @@ export class Engine {
       const g = await runGauntlet({
         worktree,
         checks: this.config.checks,
+        baseline,
         runner: this.execRunner,
         maxRounds: this.config.gauntletRounds,
         readFiles: (rels) => readFileContext(worktree, rels),
