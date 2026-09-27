@@ -153,8 +153,16 @@ export class GitHubModelsRunner implements AgentRunner {
     if (!res.ok) {
       throw new Error(`GitHub Models ${res.status}: ${(await res.text()).slice(0, 300)}`);
     }
-    const json = (await res.json()) as any;
+    const body = await res.text();
+    let json: any;
+    try {
+      json = JSON.parse(body);
+    } catch {
+      // Some tokens/endpoints return a non-JSON body (observed: 200 + "OK").
+      throw new Error(`GitHub Models returned non-JSON (${res.status}): ${body.slice(0, 200)}`);
+    }
     const text = json?.choices?.[0]?.message?.content ?? "";
+    if (!text) throw new Error(`GitHub Models returned no content: ${body.slice(0, 200)}`);
     return { text, costUsd: 0 };
   }
 }
