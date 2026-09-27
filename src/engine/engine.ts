@@ -489,6 +489,7 @@ export class Engine {
     const branch = `engine/${task.issueNumber ?? task.id.slice(0, 8)}`;
     let worktree = "";
     let cost = 0;
+    let baseline: Record<string, boolean> | undefined;
     try {
       worktree = await createWorktree(this.config.repoRoot, branch, this.config.workRoot);
       this.store.update(task.id, { status: "executing", branch });
@@ -519,7 +520,6 @@ export class Engine {
 
       // Baseline the checks on the CLEAN tree: a check that already fails here is
       // pre-existing and must not block the change (only new failures gate).
-      let baseline: Record<string, boolean> | undefined;
       try {
         const base = await runChecks(worktree, this.config.checks, 10 * 60_000);
         baseline = Object.fromEntries(base.map((r) => [r.name, r.ok]));
