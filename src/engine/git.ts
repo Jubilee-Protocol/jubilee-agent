@@ -73,7 +73,9 @@ export async function commitAll(cwd: string, message: string): Promise<string> {
 }
 
 export async function pushBranch(cwd: string, branch: string): Promise<void> {
-  await git(["push", "-u", "origin", branch], cwd);
+  // The engine reuses engine/<issue> across runs, so a stale remote branch would
+  // reject the push. These branches are engine-owned — replace them.
+  await git(["push", "-u", "--force", "origin", branch], cwd);
 }
 
 export async function openPr(cwd: string, title: string, body: string): Promise<string> {
@@ -120,6 +122,15 @@ export async function ghIssueLabels(
   remove: string[],
   cwd: string,
 ): Promise<void> {
+  // `gh issue edit` fails if a label is unknown (e.g. engine:question in a repo
+  // that never had one), so ensure each label exists first.
+  for (const l of add) {
+    try {
+      await gh(["label", "create", l, "--repo", repo, "--color", "ededed", "--force"], cwd);
+    } catch {
+      /* label already exists */
+    }
+  }
   const args = ["issue", "edit", String(num), "--repo", repo];
   for (const l of add) args.push("--add-label", l);
   for (const l of remove) args.push("--remove-label", l);
