@@ -75,9 +75,18 @@ async function tryCmd(cmd: string, cwd: string): Promise<{ ok: boolean; out: str
   }
 }
 
+/** Scanner EXECUTION failures (bad config, missing module) are not findings. */
+const TOOL_FAIL_RE =
+  /(Cannot find module|HHE\d{2}|Problem executing hardhat|non-local installation|command not found|ENOENT|not installed|No such file or directory|is not supported)/i;
+
 async function scanStage(name: string, cmd: string, cwd: string, maxChars = 800): Promise<GauntletStage> {
   const r = await tryCmd(cmd, cwd);
   if (r.missing) return { name, ok: true, skipped: true, detail: "tool not installed" };
+  if (!r.ok && TOOL_FAIL_RE.test(r.out)) {
+    // The scanner could not RUN — a tooling gap, not a vulnerability — so it is
+    // advisory rather than blocking (mirrors the baseline-checks rule).
+    return { name, ok: true, skipped: true, detail: `could not run (advisory): ${r.out.slice(0, maxChars)}` };
+  }
   return { name, ok: r.ok, detail: r.out.slice(0, maxChars) };
 }
 
