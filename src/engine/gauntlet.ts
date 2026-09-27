@@ -25,13 +25,14 @@ import type { VerifyCheck } from "./types.js";
 const run = promisify(execFile);
 const MAXBUF = 32 * 1024 * 1024;
 
-/** Files changed in the worktree vs HEAD. */
+/** Files changed in the worktree (includes untracked new files). */
 async function changedFiles(cwd: string): Promise<string[]> {
   try {
-    const { stdout } = await run("git", ["diff", "--name-only", "HEAD"], { cwd, maxBuffer: MAXBUF });
+    const { stdout } = await run("git", ["status", "--porcelain"], { cwd, maxBuffer: MAXBUF });
     return stdout
       .split("\n")
-      .map((s) => s.trim())
+      .map((l) => l.slice(3).trim())
+      .map((p) => (p.includes(" -> ") ? p.split(" -> ").pop()! : p))
       .filter(Boolean);
   } catch {
     return [];
@@ -40,8 +41,8 @@ async function changedFiles(cwd: string): Promise<string[]> {
 
 /** Executable code (what a red-team can actually exploit), vs docs/config. */
 const CODE_RE = /\.(ts|tsx|js|jsx|mjs|cjs|py|go|rs|sol|sh|rb|java|kt|swift|php|cs)$/;
-/** Dependency manifests — only changes to these make a dependency audit blocking. */
-const DEPS_RE = /(^|\/)(package\.json|bun\.lockb?|package-lock\.json|yarn\.lock|pnpm-lock\.yaml)$/;
+/** Dependency MANIFESTS only (not lockfiles — install churn must not flip this). */
+const DEPS_RE = /(^|\/)(package\.json|requirements\.txt|pyproject\.toml|foundry\.toml|Cargo\.toml|go\.mod)$/;
 
 export interface GauntletStage {
   name: string;
