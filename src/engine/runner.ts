@@ -222,3 +222,18 @@ export function runnerFor(kind: string, model?: string): AgentRunner {
 export function defaultRunner(): AgentRunner {
   return runnerFor(process.env.JUBILEE_RUNNER ?? "triune");
 }
+
+/** Try a primary runner, then a fallback when the primary fails (e.g. credits low). */
+export class FallbackRunner implements AgentRunner {
+  constructor(
+    private readonly primary: AgentRunner,
+    private readonly secondary: AgentRunner,
+  ) {}
+  async run(prompt: string, opts?: { cwd?: string }): Promise<RunResult> {
+    try {
+      return await this.primary.run(prompt, opts);
+    } catch {
+      return this.secondary.run(prompt, opts);
+    }
+  }
+}

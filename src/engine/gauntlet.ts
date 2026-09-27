@@ -163,6 +163,7 @@ function fixPrompt(findings: string, fileContext: string): string {
 export async function runGauntlet(opts: {
   worktree: string;
   checks: VerifyCheck[];
+  baseline?: Record<string, boolean>;
   runner: AgentRunner;
   maxRounds?: number;
   readFiles?: (rels: string[]) => string;
@@ -180,9 +181,19 @@ export async function runGauntlet(opts: {
     opts.onEvent?.(`🛡️ Gauntlet round ${round}/${maxRounds}`);
 
     const results = await runChecks(worktree, checks);
-    const checksOk = allPassed(results);
-    stages.push({ name: `checks(r${round})`, ok: checksOk, detail: summarize(results) });
-    if (!checksOk) opts.onEvent?.(`❌ checks failed: ${summarize(results).replace(/\s+/g, " ").slice(0, 600)}`);
+    // A check that already failed on the clean tree is PRE-EXISTING and must not
+    // block the change — only newly-introduced failures gate.
+    const failing = results.filter((r) => !r.ok);
+    const preExisting = failing.filter((r) => opts.baseline?.[r.name] === false);
+    const newlyFailing = failing.filter((r) => opts.baseline?.[r.name] !== false);
+    const checksOk = newlyFailing.length === 0;
+    stages.push({
+      name: `checks(r${round})`,
+      ok: checksOk,
+      detail: summarize(results) + (preExisting.length ? ` (pre-existing: ${preExisting.map((r) => r.name).join(", ")})` : ""),
+    });
+    if (!checksOk) opts.onEvent?.(`❌ checks failed: ${newlyFailing.map((r) => r.name).join(", ")}`);
+    else if (preExisting.length) opts.onEvent?.(`⚠️ pre-existing checks (advisory): ${preExisting.map((r) => r.name).join(", ")}`);
 
     const files = await changedFiles(worktree);
     const codeTouched = files.some((f) => CODE_RE.test(f));
