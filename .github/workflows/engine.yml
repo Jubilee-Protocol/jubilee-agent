@@ -43,7 +43,7 @@ jobs:
         uses: actions/cache@v4
         with:
           path: /tmp/ollama-models
-          key: ollama-${{ vars.JUBILEE_MODEL || 'qwen2.5-coder:3b' }}
+          key: ollama-${{ vars.JUBILEE_MODEL || 'qwen2.5-coder:3b' }}-${{ vars.JUBILEE_EXEC_MODEL || 'none' }}
 
       - name: Start local model (Ollama — free, no API key)
         if: ${{ (vars.JUBILEE_RUNNER || 'ollama') == 'ollama' }}
@@ -51,6 +51,9 @@ jobs:
           docker run -d --name ollama -p 11434:11434 -v /tmp/ollama-models:/root/.ollama ollama/ollama:latest
           for i in $(seq 1 30); do curl -sf http://127.0.0.1:11434/api/version >/dev/null && break; sleep 2; done
           docker exec ollama ollama pull ${{ vars.JUBILEE_MODEL || 'qwen2.5-coder:3b' }}
+          if [ "${{ vars.JUBILEE_EXEC_RUNNER }}" = "ollama" ] && [ -n "${{ vars.JUBILEE_EXEC_MODEL }}" ]; then
+            docker exec ollama ollama pull ${{ vars.JUBILEE_EXEC_MODEL }}
+          fi
 
       - name: Install contract analyzers (best effort)
         continue-on-error: true
